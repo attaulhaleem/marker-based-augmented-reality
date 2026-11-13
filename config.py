@@ -16,6 +16,6 @@ CAPTURE_NEW_FRAME = False
 DETECTOR_NAME = "SIFT"
 
 DETECTORS = {
-   "SIFT": {"create": cv.SIFT_create, "settings": {}, "norm": cv.NORM_L2},
+    "SIFT": {"create": cv.SIFT_create, "settings": {}, "norm": cv.NORM_L2},
 }
 

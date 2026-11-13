@@ -1,7 +1,5 @@
 import cv2 as cv
-import numpy as np
 import matplotlib.pyplot as plt
-from config import CAMERA_INDEX
 
 
 def load_image(image_path):
@@ -70,20 +68,24 @@ def center_crop_to_size(image, target_width, target_height):
     return cv.resize(cropped, (target_width, target_height))
 
 
-def grab_frame(warmup_frames=30):
-    """Open the camera, let it warm up, return one frame (or None)."""
-    capture = cv.VideoCapture(CAMERA_INDEX)
-    
+def grab_frame(camera_index, warmup_frames=30):
+    """
+    Open camera `camera_index`, let it warm up, and return one frame.
+    Raises RuntimeError if the camera can't be opened or gives no frame.
+    """
+    capture = cv.VideoCapture(camera_index)
+
     if not capture.isOpened():
-        return None
-    
+        raise RuntimeError(f"Couldn't open camera {camera_index}")
+
+    frame = None
     try:
         for _ in range(max(1, warmup_frames)):
-            ok, frame = capture.read()
+            _, frame = capture.read()
     finally:
         capture.release()
 
     if frame is None:
-        raise RuntimeError(f"No frame from camera {CAMERA_INDEX}")
-        
+        raise RuntimeError(f"No frame from camera {camera_index}")
+
     return frame
