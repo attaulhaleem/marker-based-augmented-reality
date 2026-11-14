@@ -1,15 +1,25 @@
 import cv2 as cv
 
-from config import DETECTORS, MATCHERS
+from config import DETECTORS, FILTERS, MATCHERS
 
 
-def build_detector(name, **overrides):
+def build_from_registry(registry, name, **overrides):
     """
-    Create the feature detector registered as `name` in DETECTORS.
+    Create the object registered as `name` in `registry`.
+    Keyword `overrides` replace the registered default settings.
+    Raises KeyError if `name` is not registered.
+    """
+    entry = registry[name]
+    settings = {**entry["settings"], **overrides}
+    return entry["create"](**settings)
+
+
+def build_detector(detector_name, **overrides):
+    """
+    Create the feature detector registered as `detector_name` in DETECTORS.
     Keyword `overrides` replace the registered default settings.
     """
-    entry = DETECTORS[name]
-    return entry["create"](**{**entry["settings"], **overrides})
+    return build_from_registry(DETECTORS, detector_name, **overrides)
 
 
 def extract_features(detector, image):
@@ -28,9 +38,8 @@ def build_matcher(matcher_name, detector_name, **overrides):
     using the distance norm of the detector registered as `detector_name`.
     Keyword `overrides` replace the registered default settings.
     """
-    entry = MATCHERS[matcher_name]
     norm = DETECTORS[detector_name]["norm"]
-    return entry["create"](normType=norm, **{**entry["settings"], **overrides})
+    return build_from_registry(MATCHERS, matcher_name, normType=norm, **overrides)
 
 
 def match_descriptors(matcher, query_descriptors, train_descriptors, k=2):
@@ -42,3 +51,20 @@ def match_descriptors(matcher, query_descriptors, train_descriptors, k=2):
     if query_descriptors is None or train_descriptors is None:
         return []
     return matcher.knnMatch(query_descriptors, train_descriptors, k=k)
+
+
+def build_filter(filter_name, **overrides):
+    """
+    Create the match filter registered as `filter_name` in FILTERS.
+    Keyword `overrides` replace the registered default settings.
+    """
+    return build_from_registry(FILTERS, filter_name, **overrides)
+
+
+def filter_matches(match_filter, knn_matches):
+    """
+    Filter `knn_matches` (one list of DMatch candidates per query
+    descriptor) with `match_filter`. Returns the kept matches as a flat
+    list of DMatch.
+    """
+    return match_filter.match_filter(knn_matches)

@@ -1,5 +1,7 @@
 import cv2 as cv
 
+import filters
+
 # Input file paths
 MARKER_PATH = "data/marker.png"
 SUBSTITUTE_PATH = "data/substitute.png"
@@ -24,4 +26,11 @@ MATCHER_NAME = "BF"
 
 MATCHERS = {
     "BF": {"create": cv.BFMatcher, "settings": {}},
+}
+
+# Filters
+FILTER_NAME = "RATIO"
+
+FILTERS = {
+    "RATIO": {"create": filters.RatioFilter, "settings": {"ratio": 0.75}},
 }
