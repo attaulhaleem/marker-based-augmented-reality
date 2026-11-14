@@ -34,15 +34,22 @@ def plot_keypoints(image, keypoints, title="", size=8):
     each keypoint's size and orientation.
     """
     image_with_keypoints = cv.drawKeypoints(
-        image, keypoints, None,
+        image,
+        keypoints,
+        None,
         flags=cv.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS,
     )
     plot_image(image_with_keypoints, title, size)
 
 
 def plot_matches(
-    query_image, query_keypoints, train_image, train_keypoints,
-    matches, title="", size=16,
+    query_image,
+    query_keypoints,
+    train_image,
+    train_keypoints,
+    matches,
+    title="",
+    size=16,
 ):
     """
     Show both images side by side with a line joining each matched pair
@@ -50,9 +57,12 @@ def plot_matches(
     trainIdx index into `query_keypoints` and `train_keypoints`.
     """
     image_with_matches = cv.drawMatches(
-        query_image, query_keypoints,
-        train_image, train_keypoints,
-        matches, None,
+        query_image,
+        query_keypoints,
+        train_image,
+        train_keypoints,
+        matches,
+        None,
         flags=cv.DRAW_MATCHES_FLAGS_NOT_DRAW_SINGLE_POINTS,
     )
     plot_image(image_with_matches, title, size)
@@ -84,12 +94,12 @@ def center_crop_to_size(image, target_width, target_height):
 
     # Largest scale at which a target-shaped rectangle still fits inside the image
     scale = min(image_width / target_width, image_height / target_height)
-    crop_width  = int(target_width  * scale)
+    crop_width = int(target_width * scale)
     crop_height = int(target_height * scale)
 
     # Top-left corner of the centred crop
-    left = (image_width  - crop_width)  // 2
-    top  = (image_height - crop_height) // 2
+    left = (image_width - crop_width) // 2
+    top = (image_height - crop_height) // 2
 
     # numpy indexing is [rows, columns] = [y, x]
     cropped = image[top : top + crop_height, left : left + crop_width]
