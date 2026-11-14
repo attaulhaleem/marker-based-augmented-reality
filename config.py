@@ -19,3 +19,9 @@ DETECTORS = {
     "SIFT": {"create": cv.SIFT_create, "settings": {}, "norm": cv.NORM_L2},
 }
 
+# Matchers
+MATCHER_NAME = "BF"
+
+MATCHERS = {
+    "BF": {"create": cv.BFMatcher, "settings": {}},
+}

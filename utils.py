@@ -3,6 +3,10 @@ import matplotlib.pyplot as plt
 
 
 def load_image(image_path):
+    """
+    Read the image at `image_path` as a BGR array.
+    Raises FileNotFoundError if it can't be read.
+    """
     image = cv.imread(image_path)
     if image is None:
         raise FileNotFoundError(f"Couldn't read {image_path}")
@@ -10,6 +14,10 @@ def load_image(image_path):
 
 
 def plot_image(image, title="", size=8):
+    """
+    Show `image` (BGR or grayscale) in a `size` x `size` inch figure,
+    with `title` above it and no axes.
+    """
     plt.figure(figsize=(size, size))
     if image.ndim == 2:
         plt.imshow(image, cmap="gray")
@@ -20,12 +28,34 @@ def plot_image(image, title="", size=8):
     plt.show()
 
 
-def plot_image_with_keypoints(image, keypoints, title="", size=8):
+def plot_keypoints(image, keypoints, title="", size=8):
+    """
+    Show `image` with `keypoints` drawn on it as circles that indicate
+    each keypoint's size and orientation.
+    """
     image_with_keypoints = cv.drawKeypoints(
         image, keypoints, None,
         flags=cv.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS,
     )
     plot_image(image_with_keypoints, title, size)
+
+
+def plot_matches(
+    query_image, query_keypoints, train_image, train_keypoints,
+    matches, title="", size=16,
+):
+    """
+    Show both images side by side with a line joining each matched pair
+    of keypoints. `matches` is a flat list of DMatch whose queryIdx and
+    trainIdx index into `query_keypoints` and `train_keypoints`.
+    """
+    image_with_matches = cv.drawMatches(
+        query_image, query_keypoints,
+        train_image, train_keypoints,
+        matches, None,
+        flags=cv.DRAW_MATCHES_FLAGS_NOT_DRAW_SINGLE_POINTS,
+    )
+    plot_image(image_with_matches, title, size)
 
 
 def shrink_to_max_side(image, max_side):
