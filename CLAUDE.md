@@ -3,18 +3,20 @@ I'm building a marker-based augmented reality app in Python with OpenCV (course 
 Files:
 
 - ar_app.ipynb: runs the pipeline step by step, reads config, does all plotting.
+- config.py: paths, settings and the technique registries (DETECTORS, MATCHERS, FILTERS).
+- pipeline.py: the build_x factories and the pipeline stage functions.
+- filters.py: the match filter classes (RatioFilter). Imports nothing from the project, so config.py can import it without a cycle.
+- utils.py: plotting and image helpers.
 - VAR-BSC-Final-Project-2026.pdf: the assignment. Check it for requirements.
 - Marker AR Project Guide.html: the project guide (pipeline stages, GUI, study, report, pitfalls). Check it for the expected approach.
 - data/: marker.png (the marker), frame.png (saved camera frame), substitute.png (image to warp onto the marker).
 
-Current state: SIFT feature extraction, descriptor matching (brute force, knnMatch with k=2) and match visualization work on a marker image and a camera frame.
-
-Next steps: match filtering (ratio test), RANSAC homography, then warping the substitute image onto the frame.
-
 Design rules to keep:
 
 - Pipeline stages are pure functions in pipeline.py (parameters in, data out, no plotting). They may look up the registries by name, but never read settings such as DETECTOR_NAME; the notebook passes those in.
-- Every swappable technique is registered in config.py (see DETECTORS and MATCHERS) as {"create": ..., "settings": {...}}. Each has a build_x(name) function, and the stage function takes the built object.
+- Every swappable technique is registered in config.py (see DETECTORS, MATCHERS and FILTERS) as {"create": ..., "settings": {...}}. Each has a build_x(name) function, and the stage function takes the built object.
+- Every build_x goes through build_from_registry(registry, name, **overrides) in pipeline.py. Don't repeat the lookup and settings merge.
+- Techniques I write myself are classes, so they are built like OpenCV objects: settings go into __init__, and one method does the work. A filter has match_filter(knn_matches), which returns a flat list of DMatch. Adding a filter is one class in filters.py plus one line in FILTERS.
 - Plotting and image helpers live in utils.py.
 - Maintainability, readability and being generic matter most.
 
