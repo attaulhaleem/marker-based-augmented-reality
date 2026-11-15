@@ -6,11 +6,11 @@ import matchers
 import views
 
 # Input file paths
-MARKER_PATH = "data/marker.png"
-SUBSTITUTE_PATH = "data/substitute.png"
+MARKER_PATH = "data/marker1.png"
+SUBSTITUTE_PATH = "data/substitute1.png"
 
 # Output file paths
-FRAME_PATH = "data/frame.png"
+FRAME_PATH = "data/frames/test_frame.png"
 # Folder where the live app saves the camera frames
 FRAMES_FOLDER = "data/frames"
 
