@@ -43,6 +43,7 @@ The app opens two windows: the video, and a Controls window with sliders for sel
 | `f` | Next filter (LOCAL, GLOBAL) |
 | `e` | Next estimator (RANSAC, LEAST_SQUARES, LMEDS, PROSAC) |
 | `v` | Next view (AUGMENTED, KEYPOINTS, UNFILTERED, FILTERED, INLIERS) |
+| `s` | Save the camera frame to `data/frames/` (change the folder with `--frames`) |
 | `r` | Reset every technique and setting to the defaults |
 | `q` | Quit |
 

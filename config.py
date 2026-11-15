@@ -11,6 +11,8 @@ SUBSTITUTE_PATH = "data/substitute.png"
 
 # Output file paths
 FRAME_PATH = "data/frame.png"
+# Folder where the live app saves the camera frames
+FRAMES_FOLDER = "data/frames"
 
 # Pipeline settings
 MARKER_MAX_SIDE = 1000

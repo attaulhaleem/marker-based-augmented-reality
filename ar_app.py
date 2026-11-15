@@ -10,7 +10,8 @@ from pipeline import (apply_detector, apply_estimator, apply_filter,
                       apply_matcher, apply_view, build_detector,
                       build_estimator, build_filter, build_matcher, build_view)
 from utils import (center_crop_to_size, count_best_matches, draw_text_rows,
-                   load_image, open_camera, shrink_to_max_side)
+                   load_image, open_camera, save_numbered_image,
+                   shrink_to_max_side)
 from views import FrameResult
 
 VIEW_WINDOW_NAME = "Marker-based Augmented Reality"
@@ -18,6 +19,7 @@ CONTROLS_WINDOW_NAME = "Controls"
 
 QUIT_KEY = "q"
 RESET_KEY = "r"
+SAVE_KEY = "s"
 
 # Decimals kept in a setting value read from a trackbar, to drop the
 # rounding noise of position times step (70 * 0.01 is not exactly 0.7)
@@ -182,14 +184,16 @@ class MarkerArApp:
     with the sliders of the controls window.
     """
 
-    def __init__(self, marker, substitute):
+    def __init__(self, marker, substitute, frames_folder=config.FRAMES_FOLDER):
         """
         Create the app for the image `marker` and the image `substitute`
         (same size as the marker), with the techniques selected in
-        config and their default settings.
+        config and their default settings. The save key saves camera
+        frames in `frames_folder`.
         """
         self.marker = marker
         self.substitute = substitute
+        self.frames_folder = frames_folder
         self.reset()
 
     def reset(self):
@@ -374,16 +378,31 @@ class MarkerArApp:
     def handle_key(self, key):
         """
         React to the pressed `key` (as returned by cv.waitKey): the
-        reset key resets the app, and the key of a stage selects its
-        next technique. Other keys do nothing.
+        reset key resets the app, the save key saves the last camera
+        frame, and the key of a stage selects its next technique. Other
+        keys do nothing.
         """
         if key == ord(RESET_KEY):
             self.reset()
             self.recreate_controls()
 
+        if key == ord(SAVE_KEY):
+            self.save_frame()
+
         for stage_name, stage in self.stages.items():
             if key == ord(stage.key):
                 self.select_next_technique(stage_name)
+
+    def save_frame(self):
+        """
+        Save the last processed camera frame, as the camera gave it
+        (nothing drawn on it), in the frames folder and print its path.
+        Does nothing before the first frame.
+        """
+        if self.result is None:
+            return
+        frame_path = save_numbered_image(self.result.frame, self.frames_folder)
+        print(f"Saved {frame_path}")
 
     def get_key_texts(self, stage_action=""):
         """
@@ -394,6 +413,7 @@ class MarkerArApp:
         key_texts = []
         for stage in self.stages.values():
             key_texts.append(f"{stage.key}: {stage_action}{stage.label}")
+        key_texts.append(f"{SAVE_KEY}: Save Frame")
         key_texts.append(f"{RESET_KEY}: Reset")
         key_texts.append(f"{QUIT_KEY}: Quit")
         return key_texts
@@ -568,8 +588,9 @@ class MarkerArApp:
 def parse_arguments():
     """
     Read the command line of the app. Returns the parsed arguments:
-    `marker` and `substitute`, the paths of the two images, which
-    default to the ones in config.
+    `marker` and `substitute`, the paths of the two images, and
+    `frames`, the folder for saved camera frames, which default to the
+    ones in config.
     """
     parser = argparse.ArgumentParser(description="Marker-based augmented reality")
     parser.add_argument(
@@ -582,18 +603,27 @@ def parse_arguments():
         default=config.SUBSTITUTE_PATH,
         help=f"image shown in place of the marker (default: {config.SUBSTITUTE_PATH})",
     )
+    parser.add_argument(
+        "--frames",
+        default=config.FRAMES_FOLDER,
+        help=f"folder for the saved camera frames (default: {config.FRAMES_FOLDER})",
+    )
     return parser.parse_args()
 
 
-def run_app(marker_path=config.MARKER_PATH, substitute_path=config.SUBSTITUTE_PATH):
+def run_app(
+    marker_path=config.MARKER_PATH,
+    substitute_path=config.SUBSTITUTE_PATH,
+    frames_folder=config.FRAMES_FOLDER,
+):
     """
     Run the live app: find the marker (the image at `marker_path`) in
     every camera frame and show the frame with the marker replaced by
     the substitute (the image at `substitute_path`), above a status
     strip, until q is pressed.
     Pressing r resets every technique and setting to its config default,
-    and d, m, f, e or v selects the next detector, matcher, filter,
-    estimator or view.
+    s saves the camera frame in `frames_folder`, and d, m, f, e or v
+    selects the next detector, matcher, filter, estimator or view.
     Raises FileNotFoundError if an image can't be read and RuntimeError
     if no camera can be opened.
     """
@@ -605,7 +635,7 @@ def run_app(marker_path=config.MARKER_PATH, substitute_path=config.SUBSTITUTE_PA
 
     capture = open_camera(config.CAMERA_INDEX, config.FALLBACK_CAMERA_INDEX)
 
-    app = MarkerArApp(marker, substitute)
+    app = MarkerArApp(marker, substitute, frames_folder)
     app.create_controls()
 
     while True:
@@ -633,4 +663,4 @@ def run_app(marker_path=config.MARKER_PATH, substitute_path=config.SUBSTITUTE_PA
 
 if __name__ == "__main__":
     arguments = parse_arguments()
-    run_app(arguments.marker, arguments.substitute)
+    run_app(arguments.marker, arguments.substitute, arguments.frames)

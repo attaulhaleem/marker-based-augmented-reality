@@ -1,3 +1,5 @@
+import os
+
 import cv2 as cv
 import matplotlib.pyplot as plt
 import numpy as np
@@ -61,6 +63,26 @@ def grab_frame(camera_index, warmup_frames=30, fallback_index=None):
         raise RuntimeError("The opened camera gave no frame")
 
     return frame
+
+
+def save_numbered_image(image, folder, prefix="frame"):
+    """
+    Save `image` in `folder` (created if needed) as a PNG named `prefix`
+    and the first number that is not used yet, such as frame_01.png.
+    Returns the path of the saved file.
+    Raises OSError if the image can't be written.
+    """
+    os.makedirs(folder, exist_ok=True)
+
+    image_number = 1
+    image_path = os.path.join(folder, f"{prefix}_{image_number:02d}.png")
+    while os.path.exists(image_path):
+        image_number += 1
+        image_path = os.path.join(folder, f"{prefix}_{image_number:02d}.png")
+
+    if not cv.imwrite(image_path, image):
+        raise OSError(f"Couldn't write {image_path}")
+    return image_path
 
 
 def shrink_to_max_side(image, max_side):
