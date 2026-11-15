@@ -69,6 +69,36 @@ def plot_matches(
     plot_image(image_with_matches, title, size)
 
 
+def select_best_matches(knn_matches):
+    """
+    Pick the best candidate of each query descriptor from `knn_matches`
+    (one list of DMatch candidates per query descriptor, best first).
+    Returns them as a flat list of DMatch, closest first; query
+    descriptors with no candidates are dropped.
+    """
+    best_matches = []
+    for candidates in knn_matches:
+        if candidates:
+            best_matches.append(candidates[0])
+
+    best_matches.sort(key=lambda match: match.distance)
+    return best_matches
+
+
+def select_inlier_matches(matches, inlier_mask):
+    """
+    Pick the matches that `inlier_mask` marks as inliers. `matches` is
+    a flat list of DMatch and `inlier_mask` has one row per match (1
+    for an inlier), as returned by apply_estimator. Returns the inliers
+    as a flat list of DMatch.
+    """
+    inlier_matches = []
+    for match, is_inlier in zip(matches, inlier_mask.ravel()):
+        if is_inlier:
+            inlier_matches.append(match)
+    return inlier_matches
+
+
 def project_corners(homography, image):
     """
     Map the four corners of `image` with `homography`. Returns their
@@ -104,6 +134,41 @@ def plot_outline(image, corners, title="", size=8):
     of (x, y) positions, in order) drawn on it.
     """
     plot_image(draw_outline(image, corners), title, size)
+
+
+def warp_image(image, homography, output_width, output_height):
+    """
+    Warp `image` with `homography` into an output of `output_width` x
+    `output_height` pixels. Returns (warped_image, mask), where mask is
+    a grayscale image of the output size: 255 where the output is fully
+    covered by `image`, 0 where it is not, and in between on the edge.
+    """
+    output_size = (output_width, output_height)
+    warped_image = cv.warpPerspective(image, homography, output_size)
+
+    # Warping a white image marks the output pixels that `image` covers
+    white = np.full(image.shape[:2], 255, np.uint8)
+    mask = cv.warpPerspective(white, homography, output_size)
+
+    return warped_image, mask
+
+
+def overlay_image(background, overlay, mask, background_alpha):
+    """
+    Blend `overlay` into `background` where `mask` is 255 (fully
+    covered); the two images and the mask have the same size. A blended
+    pixel is `background_alpha` times the background plus the rest from
+    the overlay, so 0 replaces the background and 1 keeps it. Returns
+    the result as a new image.
+    """
+    blended = cv.addWeighted(
+        overlay, 1 - background_alpha, background, background_alpha, 0
+    )
+
+    is_covered = mask == 255
+    result = background.copy()
+    result[is_covered] = blended[is_covered]
+    return result
 
 
 def shrink_to_max_side(image, max_side):

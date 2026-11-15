@@ -15,6 +15,9 @@ FRAME_PATH = "data/frame.png"
 MARKER_MAX_SIDE = 1000
 CAMERA_INDEX = 1
 CAPTURE_NEW_FRAME = False
+# How much of the frame shows through the substitute: 0 replaces the
+# marker completely, 1 leaves the frame unchanged
+FRAME_ALPHA = 0.3
 
 # Technique registries. Every entry has "create" (called with the
 # settings to build the technique) and "settings" (its defaults, which
