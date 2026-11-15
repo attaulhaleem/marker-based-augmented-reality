@@ -19,14 +19,14 @@ class LocalRatioFilter:
         flat list of DMatch; query descriptors with fewer than two
         candidates are dropped.
         """
-        good_matches = []
+        filtered_matches = []
         for candidates in knn_matches:
             if len(candidates) < 2:
                 continue
             best, second_best = candidates[:2]
             if best.distance < self.ratio * second_best.distance:
-                good_matches.append(best)
-        return good_matches
+                filtered_matches.append(best)
+        return filtered_matches
 
 
 class GlobalThresholdFilter:
@@ -60,8 +60,8 @@ class GlobalThresholdFilter:
 
         max_distance = max(match.distance for match in best_matches)
 
-        good_matches = []
+        filtered_matches = []
         for match in best_matches:
             if match.distance <= self.fraction * max_distance:
-                good_matches.append(match)
-        return good_matches
+                filtered_matches.append(match)
+        return filtered_matches

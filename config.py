@@ -12,7 +12,7 @@ SUBSTITUTE_PATH = "data/substitute.png"
 # Output file paths
 FRAME_PATH = "data/frame.png"
 
-# Settings
+# Pipeline settings
 MARKER_MAX_SIDE = 1000
 CAMERA_INDEX = 1
 # Camera used when CAMERA_INDEX can't be opened (0 is the built-in one)
@@ -21,6 +21,8 @@ CAPTURE_NEW_FRAME = False
 # How much of the frame shows through the substitute: 0 replaces the
 # marker completely, 1 leaves the frame unchanged
 FRAME_ALPHA = 0.2
+
+# GUI settings
 # Seconds a technique selector has to rest before the GUI switches to
 # the technique, so dragging past the others doesn't switch to each
 SELECTOR_DELAY = 0.5
@@ -35,6 +37,7 @@ STATUS_TEXT_SCALE = 1.4
 PANEL_WIDTH = 420
 # Number of keys listed in one row of the panel
 PANEL_KEYS_PER_ROW = 3
+
 # Label of the slider that selects the technique of each stage
 SELECTOR_LABELS = {
     "detector": "Detector",
@@ -253,7 +256,6 @@ ESTIMATORS = {
     },
 }
 
-
 # Views: what the app shows of a processed frame
 VIEW_NAME = "AUGMENTED"
 
@@ -287,6 +289,15 @@ VIEWS = {
     "INLIERS": {"create": views.InlierMatchesView, "settings": {}},
 }
 
+# The registry of each pipeline stage, in pipeline order
+REGISTRIES = {
+    "detector": DETECTORS,
+    "matcher": MATCHERS,
+    "filter": FILTERS,
+    "estimator": ESTIMATORS,
+    "view": VIEWS,
+}
+
 
 def get_valid_filter_names(matcher_name):
     """
@@ -296,12 +307,18 @@ def get_valid_filter_names(matcher_name):
     return MATCHERS[matcher_name]["filters"]
 
 
-# Fail early if the selected techniques can't be used together
-if FILTER_NAME not in get_valid_filter_names(MATCHER_NAME):
-    raise ValueError(
-        f"Filter {FILTER_NAME} can't be used with matcher {MATCHER_NAME}. "
-        f"Its valid filters are {get_valid_filter_names(MATCHER_NAME)}"
-    )
+def check_selected_filter(matcher_name, filter_name):
+    """
+    Check that the filter registered as `filter_name` can use the
+    matches of the matcher registered as `matcher_name`.
+    Raises ValueError if it can't.
+    """
+    valid_filter_names = get_valid_filter_names(matcher_name)
+    if filter_name not in valid_filter_names:
+        raise ValueError(
+            f"Filter {filter_name} can't be used with matcher {matcher_name}. "
+            f"Its valid filters are {valid_filter_names}"
+        )
 
 
 def check_controls(registry):
@@ -367,16 +384,9 @@ def check_control_labels(registries):
                 label_stage_names[label] = stage_name
 
 
-# The registry of each pipeline stage, in pipeline order
-REGISTRIES = {
-    "detector": DETECTORS,
-    "matcher": MATCHERS,
-    "filter": FILTERS,
-    "estimator": ESTIMATORS,
-    "view": VIEWS,
-}
-
-# Fail early if a control doesn't fit its setting or a label is reused
-for registry in REGISTRIES.values():
-    check_controls(registry)
+# Fail early if the selected techniques can't be used together, a
+# control doesn't fit its setting or a label is reused
+check_selected_filter(MATCHER_NAME, FILTER_NAME)
+for stage_registry in REGISTRIES.values():
+    check_controls(stage_registry)
 check_control_labels(REGISTRIES)

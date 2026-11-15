@@ -6,29 +6,14 @@ import numpy as np
 
 import config
 from estimators import HomographyNotFoundError
-from pipeline import (
-    apply_detector,
-    apply_estimator,
-    apply_filter,
-    apply_matcher,
-    apply_view,
-    build_detector,
-    build_estimator,
-    build_filter,
-    build_matcher,
-    build_view,
-)
-from utils import (
-    center_crop_to_size,
-    draw_text_rows,
-    load_image,
-    open_camera,
-    select_best_matches,
-    shrink_to_max_side,
-)
+from pipeline import (apply_detector, apply_estimator, apply_filter,
+                      apply_matcher, apply_view, build_detector,
+                      build_estimator, build_filter, build_matcher, build_view)
+from utils import (center_crop_to_size, count_best_matches, draw_text_rows,
+                   load_image, open_camera, shrink_to_max_side)
 from views import FrameResult
 
-WINDOW_NAME = "Marker-based Augmented Reality"
+VIEW_WINDOW_NAME = "Marker-based Augmented Reality"
 CONTROLS_WINDOW_NAME = "Controls"
 
 QUIT_KEY = "q"
@@ -130,7 +115,7 @@ class Stage:
         self.label = config.SELECTOR_LABELS[stage_name]
         self.key = config.SELECTOR_KEYS[stage_name]
         self.registry = config.REGISTRIES[stage_name]
-        self.name = technique_name
+        self.technique_name = technique_name
         self.rebuild = rebuild
 
         self.settings = {}
@@ -142,14 +127,51 @@ class Stage:
         Return the current settings of the selected technique, as a
         dict.
         """
-        return self.settings[self.name]
+        return self.settings[self.technique_name]
 
     def get_controls(self):
         """
         Return the "controls" of the selected technique, as a dict that
         is empty if it has none.
         """
-        return self.registry[self.name].get("controls", {})
+        return self.registry[self.technique_name].get("controls", {})
+
+
+class StageTimer:
+    """
+    Stopwatch of the pipeline: how long every stage of the last frame
+    took, and how long the whole frame took.
+    """
+
+    def __init__(self):
+        """
+        Create the timer, with no times yet.
+        """
+        self.stage_seconds = {}
+        self.frame_seconds = None
+        self.frame_start_time = None
+        self.stage_start_time = None
+
+    def start_frame(self):
+        """
+        Note that a new frame starts now. From the second frame on,
+        `frame_seconds` is the time since the previous frame started.
+        """
+        start_time = time.perf_counter()
+        if self.frame_start_time is not None:
+            self.frame_seconds = start_time - self.frame_start_time
+        self.frame_start_time = start_time
+        self.stage_start_time = start_time
+
+    def end_stage(self, stage_name):
+        """
+        Note that the stage `stage_name` ends now. Its entry in
+        `stage_seconds` is the time since the previous stage ended, or
+        since the frame started for the first stage.
+        """
+        end_time = time.perf_counter()
+        self.stage_seconds[stage_name] = end_time - self.stage_start_time
+        self.stage_start_time = end_time
 
 
 class MarkerArApp:
@@ -189,9 +211,7 @@ class MarkerArApp:
         self.request_time = 0.0
 
         self.result = None
-        self.stage_seconds = {}
-        self.frame_start_time = None
-        self.frame_seconds = None
+        self.timer = StageTimer()
 
         for stage in self.stages.values():
             stage.rebuild()
@@ -204,7 +224,7 @@ class MarkerArApp:
         technique.
         """
         if stage_name == "filter":
-            matcher_name = self.stages["matcher"].name
+            matcher_name = self.stages["matcher"].technique_name
             return list(config.get_valid_filter_names(matcher_name))
         return list(self.stages[stage_name].registry)
 
@@ -214,7 +234,7 @@ class MarkerArApp:
         marker features again, since they depend on the detector.
         """
         stage = self.stages["detector"]
-        self.detector = build_detector(stage.name, **stage.get_settings())
+        self.detector = build_detector(stage.technique_name, **stage.get_settings())
         self.marker_keypoints, self.marker_descriptors = apply_detector(
             self.detector, self.marker
         )
@@ -224,29 +244,31 @@ class MarkerArApp:
         Build the matcher with its current settings.
         """
         stage = self.stages["matcher"]
-        detector_name = self.stages["detector"].name
-        self.matcher = build_matcher(stage.name, detector_name, **stage.get_settings())
+        detector_name = self.stages["detector"].technique_name
+        self.matcher = build_matcher(
+            stage.technique_name, detector_name, **stage.get_settings()
+        )
 
     def rebuild_filter(self):
         """
         Build the match filter with its current settings.
         """
         stage = self.stages["filter"]
-        self.match_filter = build_filter(stage.name, **stage.get_settings())
+        self.match_filter = build_filter(stage.technique_name, **stage.get_settings())
 
     def rebuild_estimator(self):
         """
         Build the homography estimator with its current settings.
         """
         stage = self.stages["estimator"]
-        self.estimator = build_estimator(stage.name, **stage.get_settings())
+        self.estimator = build_estimator(stage.technique_name, **stage.get_settings())
 
     def rebuild_view(self):
         """
         Build the view with its current settings.
         """
         stage = self.stages["view"]
-        self.view = build_view(stage.name, **stage.get_settings())
+        self.view = build_view(stage.technique_name, **stage.get_settings())
 
     def change_setting(self, stage_name, setting_name, value):
         """
@@ -282,6 +304,19 @@ class MarkerArApp:
             return
         self.switch_to_requested_techniques()
 
+    def select_next_technique(self, stage_name):
+        """
+        Switch the stage `stage_name` to the technique after the
+        selected one, in the order of its selector, and from the last
+        back to the first.
+        """
+        option_names = self.get_option_names(stage_name)
+        selected_index = option_names.index(self.stages[stage_name].technique_name)
+        next_index = (selected_index + 1) % len(option_names)
+
+        self.requested_names[stage_name] = option_names[next_index]
+        self.switch_to_requested_techniques()
+
     def switch_to_requested_techniques(self):
         """
         Switch to the requested techniques now. Then rebuild the changed
@@ -297,18 +332,44 @@ class MarkerArApp:
 
         self.recreate_controls()
 
-    def select_next_technique(self, stage_name):
+    def select_requested_names(self):
         """
-        Switch the stage `stage_name` to the technique after the
-        selected one, in the order of its selector, and from the last
-        back to the first.
+        Make the requested techniques the selected ones and forget the
+        requests. Returns the names of the stages whose technique
+        changed, as a list.
         """
-        option_names = self.get_option_names(stage_name)
-        selected_index = option_names.index(self.stages[stage_name].name)
-        next_index = (selected_index + 1) % len(option_names)
+        changed_stage_names = []
+        for stage_name, technique_name in self.requested_names.items():
+            stage = self.stages[stage_name]
+            if technique_name != stage.technique_name:
+                stage.technique_name = technique_name
+                changed_stage_names.append(stage_name)
 
-        self.requested_names[stage_name] = option_names[next_index]
-        self.switch_to_requested_techniques()
+        self.requested_names = {}
+        return changed_stage_names
+
+    def replace_invalid_filter(self):
+        """
+        If the selected matcher can't use the selected filter, select
+        the first filter it can use.
+        """
+        filter_stage = self.stages["filter"]
+        valid_filter_names = self.get_option_names("filter")
+        if filter_stage.technique_name not in valid_filter_names:
+            filter_stage.technique_name = valid_filter_names[0]
+
+    def rebuild_from_first_changed_stage(self, changed_stage_names):
+        """
+        Rebuild the first stage in `changed_stage_names` and every stage
+        after it, in pipeline order, since a stage can depend on the
+        ones before it.
+        """
+        changed_stage_was_reached = False
+        for stage_name, stage in self.stages.items():
+            if stage_name in changed_stage_names:
+                changed_stage_was_reached = True
+            if changed_stage_was_reached:
+                stage.rebuild()
 
     def handle_key(self, key):
         """
@@ -324,44 +385,18 @@ class MarkerArApp:
             if key == ord(stage.key):
                 self.select_next_technique(stage_name)
 
-    def select_requested_names(self):
+    def get_key_texts(self, stage_action=""):
         """
-        Make the requested techniques the selected ones and forget the
-        requests. Returns the names of the stages whose technique
-        changed, as a list.
+        Return one text per key of the app, as a list: the key and what
+        it does. For the key of a stage that is `stage_action` followed
+        by the stage label, such as "d: Next Detector".
         """
-        changed_stage_names = []
-        for stage_name, technique_name in self.requested_names.items():
-            stage = self.stages[stage_name]
-            if technique_name != stage.name:
-                stage.name = technique_name
-                changed_stage_names.append(stage_name)
-
-        self.requested_names = {}
-        return changed_stage_names
-
-    def replace_invalid_filter(self):
-        """
-        If the selected matcher can't use the selected filter, select
-        the first filter it can use.
-        """
-        filter_stage = self.stages["filter"]
-        valid_filter_names = self.get_option_names("filter")
-        if filter_stage.name not in valid_filter_names:
-            filter_stage.name = valid_filter_names[0]
-
-    def rebuild_from_first_changed_stage(self, changed_stage_names):
-        """
-        Rebuild the first stage in `changed_stage_names` and every stage
-        after it, in pipeline order, since a stage can depend on the
-        ones before it.
-        """
-        changed_stage_was_reached = False
-        for stage_name, stage in self.stages.items():
-            if stage_name in changed_stage_names:
-                changed_stage_was_reached = True
-            if changed_stage_was_reached:
-                stage.rebuild()
+        key_texts = []
+        for stage in self.stages.values():
+            key_texts.append(f"{stage.key}: {stage_action}{stage.label}")
+        key_texts.append(f"{RESET_KEY}: Reset")
+        key_texts.append(f"{QUIT_KEY}: Quit")
+        return key_texts
 
     def create_controls(self):
         """
@@ -378,7 +413,7 @@ class MarkerArApp:
                     stage_name,
                     stage.label,
                     len(option_names),
-                    option_names.index(stage.name),
+                    option_names.index(stage.technique_name),
                     self.request_technique,
                 )
 
@@ -402,18 +437,16 @@ class MarkerArApp:
         cv.destroyWindow(CONTROLS_WINDOW_NAME)
         self.create_controls()
 
-    def get_key_texts(self, stage_action=""):
+    def show_panel(self):
         """
-        Return one text per key of the app, as a list: the key and what
-        it does. For the key of a stage that is `stage_action` followed
-        by the stage label, such as "d: Next Detector".
+        Show the panel under the sliders of the controls window: the
+        selected techniques by name and the real values of their
+        settings, which the sliders can only show as whole numbers.
         """
-        key_texts = []
-        for stage in self.stages.values():
-            key_texts.append(f"{stage.key}: {stage_action}{stage.label}")
-        key_texts.append(f"{RESET_KEY}: Reset")
-        key_texts.append(f"{QUIT_KEY}: Quit")
-        return key_texts
+        panel = draw_text_rows(
+            self.get_panel_rows(), config.PANEL_WIDTH, config.PANEL_TEXT_SCALE
+        )
+        cv.imshow(CONTROLS_WINDOW_NAME, panel)
 
     def get_panel_rows(self):
         """
@@ -425,7 +458,7 @@ class MarkerArApp:
         """
         rows = []
         for stage in self.stages.values():
-            rows.append((stage.label, stage.name))
+            rows.append((stage.label, stage.technique_name))
             settings = stage.get_settings()
             for setting_name, control in stage.get_controls().items():
                 value = settings[setting_name]
@@ -439,48 +472,33 @@ class MarkerArApp:
             heading = ""
         return rows
 
-    def show_panel(self):
-        """
-        Show the panel under the sliders of the controls window: the
-        selected techniques by name and the real values of their
-        settings, which the sliders can only show as whole numbers.
-        """
-        panel = draw_text_rows(
-            self.get_panel_rows(), config.PANEL_WIDTH, config.PANEL_TEXT_SCALE
-        )
-        cv.imshow(CONTROLS_WINDOW_NAME, panel)
-
     def process_frame(self, frame):
         """
         Run the pipeline on `frame`. Returns what the selected view
         draws of the result, as an image. Also keeps the result and
-        how long every stage took, for get_status_rows.
+        times every stage, for get_status_rows.
         """
-        start_time = time.perf_counter()
-        if self.frame_start_time is not None:
-            self.frame_seconds = start_time - self.frame_start_time
-        self.frame_start_time = start_time
-        stage_end_times = []
+        self.timer.start_frame()
 
         frame_keypoints, frame_descriptors = apply_detector(self.detector, frame)
-        stage_end_times.append(time.perf_counter())
+        self.timer.end_stage("detector")
 
         knn_matches = apply_matcher(
             self.matcher, self.marker_descriptors, frame_descriptors
         )
-        stage_end_times.append(time.perf_counter())
+        self.timer.end_stage("matcher")
 
-        good_matches = apply_filter(self.match_filter, knn_matches)
-        stage_end_times.append(time.perf_counter())
+        filtered_matches = apply_filter(self.match_filter, knn_matches)
+        self.timer.end_stage("filter")
 
         try:
             homography, inlier_mask = apply_estimator(
-                self.estimator, self.marker_keypoints, frame_keypoints, good_matches
+                self.estimator, self.marker_keypoints, frame_keypoints, filtered_matches
             )
         except HomographyNotFoundError:
             homography = None
             inlier_mask = None
-        stage_end_times.append(time.perf_counter())
+        self.timer.end_stage("estimator")
 
         self.result = FrameResult(
             self.marker,
@@ -489,17 +507,12 @@ class MarkerArApp:
             frame,
             frame_keypoints,
             knn_matches,
-            good_matches,
+            filtered_matches,
             homography,
             inlier_mask,
         )
         view_image = apply_view(self.view, self.result)
-        stage_end_times.append(time.perf_counter())
-
-        stage_start_time = start_time
-        for stage, stage_end_time in zip(self.stages.values(), stage_end_times):
-            self.stage_seconds[stage.label] = stage_end_time - stage_start_time
-            stage_start_time = stage_end_time
+        self.timer.end_stage("view")
 
         return view_image
 
@@ -527,18 +540,20 @@ class MarkerArApp:
             f"Frame: {len(result.frame_keypoints)}"
         )
         match_text = (
-            f"Unfiltered: {len(select_best_matches(result.knn_matches))}, "
-            f"Filtered: {len(result.matches)}, "
+            f"Unfiltered: {count_best_matches(result.knn_matches)}, "
+            f"Filtered: {len(result.filtered_matches)}, "
             f"Inliers: {inlier_count}"
         )
 
         time_texts = []
-        for label, seconds in self.stage_seconds.items():
+        for stage_name, seconds in self.timer.stage_seconds.items():
+            label = self.stages[stage_name].label
             time_texts.append(f"{label}: {seconds * 1000:.0f} ms")
-        if self.frame_seconds is not None:
-            frame_rate = 1 / self.frame_seconds
+        frame_seconds = self.timer.frame_seconds
+        if frame_seconds is not None:
+            frame_rate = 1 / frame_seconds
             time_texts.append(
-                f"Frame: {self.frame_seconds * 1000:.0f} ms ({frame_rate:.1f} FPS)"
+                f"Frame: {frame_seconds * 1000:.0f} ms ({frame_rate:.1f} FPS)"
             )
 
         return [
@@ -570,7 +585,7 @@ def parse_arguments():
     return parser.parse_args()
 
 
-def application(marker_path=config.MARKER_PATH, substitute_path=config.SUBSTITUTE_PATH):
+def run_app(marker_path=config.MARKER_PATH, substitute_path=config.SUBSTITUTE_PATH):
     """
     Run the live app: find the marker (the image at `marker_path`) in
     every camera frame and show the frame with the marker replaced by
@@ -605,7 +620,7 @@ def application(marker_path=config.MARKER_PATH, substitute_path=config.SUBSTITUT
         status_strip = draw_text_rows(
             app.get_status_rows(), shown_view.shape[1], config.STATUS_TEXT_SCALE
         )
-        cv.imshow(WINDOW_NAME, np.vstack([shown_view, status_strip]))
+        cv.imshow(VIEW_WINDOW_NAME, np.vstack([shown_view, status_strip]))
 
         key = cv.waitKey(5)
         if key == ord(QUIT_KEY):
@@ -618,4 +633,4 @@ def application(marker_path=config.MARKER_PATH, substitute_path=config.SUBSTITUT
 
 if __name__ == "__main__":
     arguments = parse_arguments()
-    application(arguments.marker, arguments.substitute)
+    run_app(arguments.marker, arguments.substitute)

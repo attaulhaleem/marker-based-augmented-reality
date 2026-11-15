@@ -49,7 +49,7 @@ Code style:
 - Consistent names: plot_x for plotting helpers, draw_x for helpers that return the drawn image without showing it, build_x for factories, descriptive variable names (shown_match_count, not shown).
 - Formatting and import order are done by Black and isort on save. Don't dictate wrapping by hand.
 - Prefer plain, readable code over compact idioms.
-- Don't add comments that explain the code. Put the explanation in chat.
+- A comment stays only where it makes the code clearer or easier to understand (why a value or a step is needed). Don't add comments that repeat what the code says. Put the rest of the explanation in chat.
 
 How to work with me:
 

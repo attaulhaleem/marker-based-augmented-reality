@@ -1,11 +1,5 @@
-from utils import (
-    draw_keypoints,
-    draw_matches,
-    overlay_image,
-    select_best_matches,
-    select_inlier_matches,
-    warp_image,
-)
+from utils import (draw_keypoints, draw_matches, overlay_image,
+                   select_best_matches, select_inlier_matches, warp_image)
 
 
 class FrameResult:
@@ -21,7 +15,7 @@ class FrameResult:
         frame,
         frame_keypoints,
         knn_matches,
-        matches,
+        filtered_matches,
         homography,
         inlier_mask,
     ):
@@ -29,7 +23,7 @@ class FrameResult:
         Store the images `marker`, `substitute` (same size as the
         marker) and `frame`, the keypoints of the marker and the frame,
         the unfiltered `knn_matches` between them (one list of DMatch
-        candidates per marker descriptor), the filtered `matches` (a
+        candidates per marker descriptor), the `filtered_matches` (a
         flat list of DMatch), the `homography` from marker to frame and
         its `inlier_mask` (one row per filtered match, 1 for an
         inlier). The homography and the mask are None if the marker was
@@ -41,7 +35,7 @@ class FrameResult:
         self.frame = frame
         self.frame_keypoints = frame_keypoints
         self.knn_matches = knn_matches
-        self.matches = matches
+        self.filtered_matches = filtered_matches
         self.homography = homography
         self.inlier_mask = inlier_mask
 
@@ -137,7 +131,7 @@ class FilteredMatchesView:
             result.marker_keypoints,
             result.frame,
             result.frame_keypoints,
-            result.matches,
+            result.filtered_matches,
         )
 
 
@@ -156,7 +150,9 @@ class InlierMatchesView:
         if result.homography is None:
             inlier_matches = []
         else:
-            inlier_matches = select_inlier_matches(result.matches, result.inlier_mask)
+            inlier_matches = select_inlier_matches(
+                result.filtered_matches, result.inlier_mask
+            )
 
         return draw_matches(
             result.marker,
