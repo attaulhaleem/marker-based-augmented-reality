@@ -34,21 +34,64 @@ FRAME_ALPHA = 0.2
 DETECTOR_NAME = "SIFT"
 
 DETECTORS = {
-    "SIFT": {"create": cv.SIFT_create, "settings": {}, "norm": cv.NORM_L2},
+    "SIFT": {
+        "create": cv.SIFT_create,
+        # nfeatures 0 keeps every keypoint
+        "settings": {"nfeatures": 0, "contrastThreshold": 0.04},
+        "norm": cv.NORM_L2,
+        "controls": {
+            "nfeatures": {
+                "label": "Features",
+                "minimum": 0,
+                "maximum": 5000,
+                "step": 1,
+            },
+            "contrastThreshold": {
+                "label": "Contrast",
+                "minimum": 0.01,
+                "maximum": 0.2,
+                "step": 0.01,
+            },
+        },
+    },
     "ORB": {
         "create": cv.ORB_create,
         "settings": {"nfeatures": 2000},
         "norm": cv.NORM_HAMMING,
+        "controls": {
+            "nfeatures": {
+                "label": "Features",
+                "minimum": 100,
+                "maximum": 5000,
+                "step": 1,
+            },
+        },
     },
     "AKAZE": {
         "create": cv.xfeatures2d.AKAZE_create,
-        "settings": {},
+        "settings": {"threshold": 0.001},
         "norm": cv.NORM_HAMMING,
+        "controls": {
+            "threshold": {
+                "label": "Threshold",
+                "minimum": 0.0001,
+                "maximum": 0.01,
+                "step": 0.0001,
+            },
+        },
     },
     "BRISK": {
         "create": cv.xfeatures2d.BRISK_create,
-        "settings": {},
+        "settings": {"thresh": 30},
         "norm": cv.NORM_HAMMING,
+        "controls": {
+            "thresh": {
+                "label": "Threshold",
+                "minimum": 5,
+                "maximum": 100,
+                "step": 1,
+            },
+        },
     },
 }
 
@@ -77,6 +120,14 @@ MATCHERS = {
             "multi_probe_level": 1,
         },
         "filters": ("RATIO", "GLOBAL"),
+        "controls": {
+            "checks": {
+                "label": "Checks",
+                "minimum": 10,
+                "maximum": 200,
+                "step": 1,
+            },
+        },
     },
 }
 
@@ -113,6 +164,22 @@ FILTERS = {
 # Estimators
 ESTIMATOR_NAME = "RANSAC"
 
+# Every estimator has the same two sliders
+ESTIMATOR_CONTROLS = {
+    "reprojection_threshold": {
+        "label": "Max Error",
+        "minimum": 0.5,
+        "maximum": 10.0,
+        "step": 0.1,
+    },
+    "min_inlier_count": {
+        "label": "Min Inliers",
+        "minimum": 4,
+        "maximum": 100,
+        "step": 1,
+    },
+}
+
 ESTIMATORS = {
     "RANSAC": {
         "create": estimators.HomographyEstimator,
@@ -121,6 +188,7 @@ ESTIMATORS = {
             "reprojection_threshold": 3.0,
             "min_inlier_count": 15,
         },
+        "controls": ESTIMATOR_CONTROLS,
     },
     "LEAST_SQUARES": {
         "create": estimators.HomographyEstimator,
@@ -129,6 +197,7 @@ ESTIMATORS = {
             "reprojection_threshold": 3.0,
             "min_inlier_count": 15,
         },
+        "controls": ESTIMATOR_CONTROLS,
     },
     "LMEDS": {
         "create": estimators.HomographyEstimator,
@@ -137,6 +206,7 @@ ESTIMATORS = {
             "reprojection_threshold": 3.0,
             "min_inlier_count": 15,
         },
+        "controls": ESTIMATOR_CONTROLS,
     },
     "PROSAC": {
         "create": estimators.HomographyEstimator,
@@ -145,6 +215,7 @@ ESTIMATORS = {
             "reprojection_threshold": 3.0,
             "min_inlier_count": 15,
         },
+        "controls": ESTIMATOR_CONTROLS,
     },
 }
 
