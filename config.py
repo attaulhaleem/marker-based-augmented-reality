@@ -32,6 +32,21 @@ DETECTOR_NAME = "SIFT"
 
 DETECTORS = {
     "SIFT": {"create": cv.SIFT_create, "settings": {}, "norm": cv.NORM_L2},
+    "ORB": {
+        "create": cv.ORB_create,
+        "settings": {"nfeatures": 2000},
+        "norm": cv.NORM_HAMMING,
+    },
+    "AKAZE": {
+        "create": cv.xfeatures2d.AKAZE_create,
+        "settings": {},
+        "norm": cv.NORM_HAMMING,
+    },
+    "BRISK": {
+        "create": cv.xfeatures2d.BRISK_create,
+        "settings": {},
+        "norm": cv.NORM_HAMMING,
+    },
 }
 
 # Matchers
@@ -85,7 +100,7 @@ ESTIMATORS = {
         "settings": {
             "method": cv.RANSAC,
             "reprojection_threshold": 3.0,
-            "min_inlier_count": 25,
+            "min_inlier_count": 15,
         },
     },
 }

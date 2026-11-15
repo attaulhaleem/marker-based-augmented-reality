@@ -2,6 +2,9 @@ import cv2 as cv
 import matplotlib.pyplot as plt
 import numpy as np
 
+# Room, in inches, that a figure leaves above a row of images for their titles
+TITLE_HEIGHT = 0.5
+
 
 def load_image(image_path):
     """
@@ -29,18 +32,53 @@ def plot_image(image, title="", size=8):
     plt.show()
 
 
-def plot_keypoints(image, keypoints, title="", size=8):
+def plot_image_row(images, titles, size=20):
     """
-    Show `image` with `keypoints` drawn on it as circles that indicate
-    each keypoint's size and orientation.
+    Show `images` (BGR or grayscale) side by side in one row, each with
+    its entry of `titles` above it and no axes. The figure is `size`
+    inches wide; its height follows the shape of the first image.
     """
-    image_with_keypoints = cv.drawKeypoints(
+    image_count = len(images)
+    image_height, image_width = images[0].shape[:2]
+    column_width = size / image_count
+    row_height = column_width * image_height / image_width
+
+    figure, axes_row = plt.subplots(
+        1,
+        image_count,
+        figsize=(size, row_height + TITLE_HEIGHT),
+        squeeze=False,
+    )
+    for axes, image, title in zip(axes_row[0], images, titles):
+        if image.ndim == 2:
+            axes.imshow(image, cmap="gray")
+        else:
+            axes.imshow(cv.cvtColor(image, cv.COLOR_BGR2RGB))
+        axes.set_title(title)
+        axes.axis("off")
+    figure.tight_layout()
+    plt.show()
+
+
+def draw_keypoints(image, keypoints):
+    """
+    Return a copy of `image` with `keypoints` drawn on it as circles
+    that indicate each keypoint's size and orientation.
+    """
+    return cv.drawKeypoints(
         image,
         keypoints,
         None,
         flags=cv.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS,
     )
-    plot_image(image_with_keypoints, title, size)
+
+
+def plot_keypoints(image, keypoints, title="", size=8):
+    """
+    Show `image` with `keypoints` drawn on it as circles that indicate
+    each keypoint's size and orientation.
+    """
+    plot_image(draw_keypoints(image, keypoints), title, size)
 
 
 def plot_matches(

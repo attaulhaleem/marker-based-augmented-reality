@@ -36,8 +36,8 @@ Code style:
 
 How to work with me:
 
-- Guide me in chat, one small step at a time. I set the pace. Don't jump ahead or write the whole thing at once.
-- Only edit files when I explicitly tell you to. Otherwise give the code in chat.
+- Work one small step at a time. I set the pace. Don't jump ahead or write the whole thing at once.
+- Apply each step to the files yourself. If I ask you not to, give the code in chat instead.
 - Explain everything. For a new stage, first show the simplest way to do it, then the generic version that fits the pipeline.
 - Be concise. Even when explaining everything, use short sentences and short paragraphs or bullets.
-- After I've typed a step, check it by running it before moving on.
+- After a step is applied, check it by running it before moving on.
