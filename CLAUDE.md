@@ -2,7 +2,8 @@ I'm building a marker-based augmented reality app in Python with OpenCV (course 
 
 Files:
 
-- ar_app.ipynb: runs the pipeline step by step, reads config, does all plotting.
+- walkthrough.ipynb: runs the pipeline step by step on one saved frame, reads config, does all plotting.
+- ar_app.py: the live webcam app. Runs the pipeline on every camera frame and shows the result in an OpenCV window. Run it with `python ar_app.py`, not from the notebook.
 - config.py: paths, settings and the technique registries (DETECTORS, MATCHERS, FILTERS, ESTIMATORS).
 - pipeline.py: the build_x factories and the pipeline stage functions.
 - estimators.py: the homography estimator class (HomographyEstimator) and HomographyNotFoundError. Imports nothing from the project, so config.py can import it without a cycle.

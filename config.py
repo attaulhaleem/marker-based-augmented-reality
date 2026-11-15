@@ -17,7 +17,7 @@ CAMERA_INDEX = 1
 CAPTURE_NEW_FRAME = False
 # How much of the frame shows through the substitute: 0 replaces the
 # marker completely, 1 leaves the frame unchanged
-FRAME_ALPHA = 0.3
+FRAME_ALPHA = 0.2
 
 # Technique registries. Every entry has "create" (called with the
 # settings to build the technique) and "settings" (its defaults, which
@@ -68,7 +68,7 @@ FILTER_NAME = "RATIO"
 FILTERS = {
     "RATIO": {
         "create": filters.RatioFilter,
-        "settings": {"ratio": 0.75},
+        "settings": {"ratio": 0.7},
     },
     "GLOBAL": {
         "create": filters.GlobalThresholdFilter,
@@ -82,7 +82,11 @@ ESTIMATOR_NAME = "RANSAC"
 ESTIMATORS = {
     "RANSAC": {
         "create": estimators.HomographyEstimator,
-        "settings": {"method": cv.RANSAC, "reprojection_threshold": 3.0},
+        "settings": {
+            "method": cv.RANSAC,
+            "reprojection_threshold": 3.0,
+            "min_inlier_count": 25,
+        },
     },
 }
 
