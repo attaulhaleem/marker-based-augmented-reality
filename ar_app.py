@@ -1,3 +1,5 @@
+import time
+
 import cv2 as cv
 
 import config
@@ -23,12 +25,51 @@ from utils import (
 WINDOW_NAME = "Marker AR"
 CONTROLS_WINDOW_NAME = "Controls"
 
-REGISTRIES = {
-    "detector": config.DETECTORS,
-    "matcher": config.MATCHERS,
-    "filter": config.FILTERS,
-    "estimator": config.ESTIMATORS,
-}
+# Decimals kept in a setting value read from a trackbar, to drop the
+# rounding noise of position times step (70 * 0.01 is not exactly 0.7)
+VALUE_DECIMALS = 10
+
+
+def value_to_position(value, step):
+    """
+    Return the trackbar position that stands for the setting `value`:
+    the number of `step`s in it, as a whole number.
+    """
+    return round(value / step)
+
+
+def position_to_value(position, step):
+    """
+    Return the setting value that the trackbar `position` stands for:
+    `position` times `step`.
+    """
+    return round(position * step, VALUE_DECIMALS)
+
+
+def create_selector_trackbar(
+    window_name, stage_name, label, option_count, position, on_change
+):
+    """
+    Add a trackbar named `label` that selects the technique of the
+    stage `stage_name` to the window `window_name`. It has
+    `option_count` positions, one per technique that can be selected,
+    and starts at `position`. When the slider moves, `on_change` is
+    called with `stage_name` and the new position.
+    """
+
+    def on_position_change(new_position):
+        """
+        Trackbar callback: pass the slider position on with the stage.
+        """
+        on_change(stage_name, new_position)
+
+    cv.createTrackbar(
+        label,
+        window_name,
+        position,
+        option_count - 1,
+        on_position_change,
+    )
 
 
 def create_setting_trackbar(
@@ -50,24 +91,63 @@ def create_setting_trackbar(
         Trackbar callback: turn the slider `position` into the setting
         value and pass it on.
         """
-        on_change(stage_name, setting_name, position * step)
+        on_change(stage_name, setting_name, position_to_value(position, step))
 
     cv.createTrackbar(
         control["label"],
         window_name,
-        round(value / step),
-        round(control["maximum"] / step),
+        value_to_position(value, step),
+        value_to_position(control["maximum"], step),
         on_position_change,
     )
-    cv.setTrackbarMin(control["label"], window_name, round(control["minimum"] / step))
+    cv.setTrackbarMin(
+        control["label"], window_name, value_to_position(control["minimum"], step)
+    )
+
+
+class Stage:
+    """
+    One pipeline stage of the app: which technique is selected for it
+    and the current settings of each of its techniques.
+    """
+
+    def __init__(self, stage_name, technique_name, rebuild):
+        """
+        Create the stage `stage_name` (a key of config.REGISTRIES) with
+        the technique `technique_name` selected and every technique at
+        its default settings. `rebuild` is the function that builds the
+        selected technique again after a change.
+        """
+        self.label = config.SELECTOR_LABELS[stage_name]
+        self.registry = config.REGISTRIES[stage_name]
+        self.name = technique_name
+        self.rebuild = rebuild
+
+        self.settings = {}
+        for registered_name, entry in self.registry.items():
+            self.settings[registered_name] = dict(entry["settings"])
+
+    def get_settings(self):
+        """
+        Return the current settings of the selected technique, as a
+        dict.
+        """
+        return self.settings[self.name]
+
+    def get_controls(self):
+        """
+        Return the "controls" of the selected technique, as a dict that
+        is empty if it has none.
+        """
+        return self.registry[self.name].get("controls", {})
 
 
 class MarkerArApp:
     """
     The marker AR pipeline with its current settings: finds the marker
     in a frame and replaces it by the substitute. The settings start at
-    the config defaults and are changed with the sliders of the
-    controls window.
+    the config defaults. The techniques and their settings are changed
+    with the sliders of the controls window.
     """
 
     def __init__(self, marker, substitute):
@@ -79,35 +159,40 @@ class MarkerArApp:
         self.marker = marker
         self.substitute = substitute
 
-        self.names = {
-            "detector": config.DETECTOR_NAME,
-            "matcher": config.MATCHER_NAME,
-            "filter": config.FILTER_NAME,
-            "estimator": config.ESTIMATOR_NAME,
+        self.stages = {
+            "detector": Stage("detector", config.DETECTOR_NAME, self.rebuild_detector),
+            "matcher": Stage("matcher", config.MATCHER_NAME, self.rebuild_matcher),
+            "filter": Stage("filter", config.FILTER_NAME, self.rebuild_filter),
+            "estimator": Stage(
+                "estimator", config.ESTIMATOR_NAME, self.rebuild_estimator
+            ),
         }
 
-        self.settings = {}
-        for stage_name, technique_name in self.names.items():
-            entry = REGISTRIES[stage_name][technique_name]
-            self.settings[stage_name] = dict(entry["settings"])
+        self.requested_names = {}
+        self.request_time = 0.0
 
-        self.rebuild_stage = {
-            "detector": self.rebuild_detector,
-            "matcher": self.rebuild_matcher,
-            "filter": self.rebuild_filter,
-            "estimator": self.rebuild_estimator,
-        }
-        for rebuild in self.rebuild_stage.values():
-            rebuild()
+        for stage in self.stages.values():
+            stage.rebuild()
+
+    def get_option_names(self, stage_name):
+        """
+        Return the names of the techniques that can be selected for the
+        stage `stage_name`, as a list: for the filter only those the
+        selected matcher allows, for the other stages every registered
+        technique.
+        """
+        if stage_name == "filter":
+            matcher_name = self.stages["matcher"].name
+            return list(config.get_valid_filter_names(matcher_name))
+        return list(self.stages[stage_name].registry)
 
     def rebuild_detector(self):
         """
         Build the detector with its current settings and detect the
         marker features again, since they depend on the detector.
         """
-        self.detector = build_detector(
-            self.names["detector"], **self.settings["detector"]
-        )
+        stage = self.stages["detector"]
+        self.detector = build_detector(stage.name, **stage.get_settings())
         self.marker_keypoints, self.marker_descriptors = apply_detector(
             self.detector, self.marker
         )
@@ -116,49 +201,135 @@ class MarkerArApp:
         """
         Build the matcher with its current settings.
         """
-        self.matcher = build_matcher(
-            self.names["matcher"], self.names["detector"], **self.settings["matcher"]
-        )
+        stage = self.stages["matcher"]
+        detector_name = self.stages["detector"].name
+        self.matcher = build_matcher(stage.name, detector_name, **stage.get_settings())
 
     def rebuild_filter(self):
         """
         Build the match filter with its current settings.
         """
-        self.match_filter = build_filter(
-            self.names["filter"], **self.settings["filter"]
-        )
+        stage = self.stages["filter"]
+        self.match_filter = build_filter(stage.name, **stage.get_settings())
 
     def rebuild_estimator(self):
         """
         Build the homography estimator with its current settings.
         """
-        self.estimator = build_estimator(
-            self.names["estimator"], **self.settings["estimator"]
-        )
+        stage = self.stages["estimator"]
+        self.estimator = build_estimator(stage.name, **stage.get_settings())
 
     def change_setting(self, stage_name, setting_name, value):
         """
         Store the new `value` of the setting `setting_name` of the stage
-        `stage_name` and rebuild that stage only.
+        `stage_name` and rebuild that stage only. Does nothing if the
+        setting already has that value.
         """
-        self.settings[stage_name][setting_name] = value
-        self.rebuild_stage[stage_name]()
+        stage = self.stages[stage_name]
+        settings = stage.get_settings()
+        if settings[setting_name] == value:
+            return
+        settings[setting_name] = value
+        stage.rebuild()
+
+    def request_technique(self, stage_name, position):
+        """
+        Note that the selector of the stage `stage_name` moved to
+        `position`. The technique is not switched here but by
+        apply_requested_techniques, once the selectors have rested.
+        """
+        option_names = self.get_option_names(stage_name)
+        self.requested_names[stage_name] = option_names[position]
+        self.request_time = time.perf_counter()
+
+    def apply_requested_techniques(self):
+        """
+        Switch to the techniques requested with the selectors, once
+        they have rested for config.SELECTOR_DELAY seconds. Then
+        rebuild the changed stages and the controls window, so it shows
+        the sliders of the selected techniques only.
+        """
+        if not self.requested_names:
+            return
+        if time.perf_counter() - self.request_time < config.SELECTOR_DELAY:
+            return
+
+        changed_stage_names = self.select_requested_names()
+        if not changed_stage_names:
+            return
+
+        self.replace_invalid_filter()
+        self.rebuild_from_first_changed_stage(changed_stage_names)
+
+        cv.destroyWindow(CONTROLS_WINDOW_NAME)
+        self.create_controls()
+
+    def select_requested_names(self):
+        """
+        Make the requested techniques the selected ones and forget the
+        requests. Returns the names of the stages whose technique
+        changed, as a list.
+        """
+        changed_stage_names = []
+        for stage_name, technique_name in self.requested_names.items():
+            stage = self.stages[stage_name]
+            if technique_name != stage.name:
+                stage.name = technique_name
+                changed_stage_names.append(stage_name)
+
+        self.requested_names = {}
+        return changed_stage_names
+
+    def replace_invalid_filter(self):
+        """
+        If the selected matcher can't use the selected filter, select
+        the first filter it can use.
+        """
+        filter_stage = self.stages["filter"]
+        valid_filter_names = self.get_option_names("filter")
+        if filter_stage.name not in valid_filter_names:
+            filter_stage.name = valid_filter_names[0]
+
+    def rebuild_from_first_changed_stage(self, changed_stage_names):
+        """
+        Rebuild the first stage in `changed_stage_names` and every stage
+        after it, in pipeline order, since a stage can depend on the
+        ones before it.
+        """
+        changed_stage_was_reached = False
+        for stage_name, stage in self.stages.items():
+            if stage_name in changed_stage_names:
+                changed_stage_was_reached = True
+            if changed_stage_was_reached:
+                stage.rebuild()
 
     def create_controls(self):
         """
-        Open the controls window with one trackbar for every control of
-        the selected techniques, in the order of the stages.
+        Open the controls window. Every stage gets a trackbar that
+        selects its technique, unless only one can be selected, followed
+        by one trackbar for every control of the selected technique.
         """
         cv.namedWindow(CONTROLS_WINDOW_NAME)
-        for stage_name, technique_name in self.names.items():
-            controls = REGISTRIES[stage_name][technique_name].get("controls", {})
-            for setting_name, control in controls.items():
+        for stage_name, stage in self.stages.items():
+            option_names = self.get_option_names(stage_name)
+            if len(option_names) > 1:
+                create_selector_trackbar(
+                    CONTROLS_WINDOW_NAME,
+                    stage_name,
+                    stage.label,
+                    len(option_names),
+                    option_names.index(stage.name),
+                    self.request_technique,
+                )
+
+            settings = stage.get_settings()
+            for setting_name, control in stage.get_controls().items():
                 create_setting_trackbar(
                     CONTROLS_WINDOW_NAME,
                     stage_name,
                     setting_name,
                     control,
-                    self.settings[stage_name][setting_name],
+                    settings[setting_name],
                     self.change_setting,
                 )
 
@@ -214,6 +385,7 @@ def application():
         if not frame_was_read:
             break
 
+        app.apply_requested_techniques()
         cv.imshow(WINDOW_NAME, app.process_frame(frame))
 
         if cv.waitKey(5) == ord("q"):

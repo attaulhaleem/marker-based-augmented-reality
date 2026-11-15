@@ -18,6 +18,16 @@ CAPTURE_NEW_FRAME = False
 # How much of the frame shows through the substitute: 0 replaces the
 # marker completely, 1 leaves the frame unchanged
 FRAME_ALPHA = 0.2
+# Seconds a technique selector has to rest before the GUI switches to
+# the technique, so dragging past the others doesn't switch to each
+SELECTOR_DELAY = 0.5
+# Label of the slider that selects the technique of each stage
+SELECTOR_LABELS = {
+    "detector": "Detector",
+    "matcher": "Matcher",
+    "filter": "Filter",
+    "estimator": "Estimator",
+}
 
 # Technique registries. Every entry has "create" (called with the
 # settings to build the technique) and "settings" (its defaults, which
@@ -219,11 +229,20 @@ ESTIMATORS = {
     },
 }
 
+
+def get_valid_filter_names(matcher_name):
+    """
+    Return the names of the filters that can use the matches of the
+    matcher registered as `matcher_name`, as a tuple.
+    """
+    return MATCHERS[matcher_name]["filters"]
+
+
 # Fail early if the selected techniques can't be used together
-if FILTER_NAME not in MATCHERS[MATCHER_NAME]["filters"]:
+if FILTER_NAME not in get_valid_filter_names(MATCHER_NAME):
     raise ValueError(
         f"Filter {FILTER_NAME} can't be used with matcher {MATCHER_NAME}. "
-        f"Its valid filters are {MATCHERS[MATCHER_NAME]['filters']}"
+        f"Its valid filters are {get_valid_filter_names(MATCHER_NAME)}"
     )
 
 
@@ -258,6 +277,47 @@ def check_controls(registry):
                 )
 
 
-# Fail early if a control doesn't fit its setting
-for registry in (DETECTORS, MATCHERS, FILTERS, ESTIMATORS):
+def check_control_labels(registries):
+    """
+    Check that no two sliders that can be shown together have the same
+    label, since a slider is found by its label. `registries` maps each
+    stage name to its registry.
+    Raises ValueError if a control label is also a selector label, is
+    used twice by one technique, or is used in two stages.
+    """
+    label_stage_names = {}
+    for stage_name, registry in registries.items():
+        for technique_name, entry in registry.items():
+            technique_labels = []
+            for control in entry.get("controls", {}).values():
+                label = control["label"]
+                if label in SELECTOR_LABELS.values():
+                    raise ValueError(
+                        f"Control label {label} of {technique_name} is "
+                        f"also a selector label"
+                    )
+                if label in technique_labels:
+                    raise ValueError(
+                        f"Control label {label} is used twice by {technique_name}"
+                    )
+                if label_stage_names.get(label, stage_name) != stage_name:
+                    raise ValueError(
+                        f"Control label {label} of {technique_name} is also "
+                        f"used in the {label_stage_names[label]} stage"
+                    )
+                technique_labels.append(label)
+                label_stage_names[label] = stage_name
+
+
+# The registry of each pipeline stage, in pipeline order
+REGISTRIES = {
+    "detector": DETECTORS,
+    "matcher": MATCHERS,
+    "filter": FILTERS,
+    "estimator": ESTIMATORS,
+}
+
+# Fail early if a control doesn't fit its setting or a label is reused
+for registry in REGISTRIES.values():
     check_controls(registry)
+check_control_labels(REGISTRIES)
