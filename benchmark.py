@@ -13,7 +13,7 @@ from utils import (StageTimer, center_crop_to_size, count_best_matches,
 NO_VALUE_TEXT = "-"
 
 # Times the pipeline runs on a frame to time it
-TIMING_RUN_COUNT = 3
+TIMING_RUN_COUNT = 5
 
 
 class PipelineMeasurement:

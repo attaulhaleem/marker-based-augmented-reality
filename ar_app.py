@@ -422,14 +422,21 @@ class MarkerArApp:
 
     def show_panel(self):
         """
-        Show the panel under the sliders of the controls window: the
+        Show the panel under the sliders of the controls window (see
+        draw_panel).
+        """
+        cv.imshow(CONTROLS_WINDOW_NAME, self.draw_panel())
+
+    def draw_panel(self):
+        """
+        Draw the panel under the sliders of the controls window: the
         selected techniques by name and the real values of their
         settings, which the sliders can only show as whole numbers.
+        Returns the panel image.
         """
-        panel = draw_text_rows(
+        return draw_text_rows(
             self.get_panel_rows(), config.PANEL_WIDTH, config.PANEL_TEXT_SCALE
         )
-        cv.imshow(CONTROLS_WINDOW_NAME, panel)
 
     def get_panel_rows(self):
         """
@@ -498,6 +505,24 @@ class MarkerArApp:
         self.timer.end_stage("view")
 
         return view_image
+
+    def draw_video_window(self, view_image):
+        """
+        Draw the content of the video window around `view_image` (what
+        process_frame returned): the view, shrunk to
+        config.DISPLAY_MAX_SIDE, between the title strip that names it
+        and the status strip of the last processed frame.
+        Returns the window image.
+        """
+        shown_view = shrink_to_max_side(view_image, config.DISPLAY_MAX_SIDE)
+        view_width = shown_view.shape[1]
+        title_strip = draw_text_rows(
+            self.get_title_rows(), view_width, config.STATUS_TEXT_SCALE
+        )
+        status_strip = draw_text_rows(
+            self.get_status_rows(), view_width, config.STATUS_TEXT_SCALE
+        )
+        return np.vstack([title_strip, shown_view, status_strip])
 
     def get_title_rows(self):
         """
@@ -619,16 +644,8 @@ def run_app(
 
         app.apply_requested_techniques()
         app.show_panel()
-        shown_view = app.process_frame(frame)
-        shown_view = shrink_to_max_side(shown_view, config.DISPLAY_MAX_SIDE)
-        view_width = shown_view.shape[1]
-        title_strip = draw_text_rows(
-            app.get_title_rows(), view_width, config.STATUS_TEXT_SCALE
-        )
-        status_strip = draw_text_rows(
-            app.get_status_rows(), view_width, config.STATUS_TEXT_SCALE
-        )
-        cv.imshow(VIEW_WINDOW_NAME, np.vstack([title_strip, shown_view, status_strip]))
+        view_image = app.process_frame(frame)
+        cv.imshow(VIEW_WINDOW_NAME, app.draw_video_window(view_image))
 
         key = cv.waitKey(5)
         if key == ord(QUIT_KEY):
