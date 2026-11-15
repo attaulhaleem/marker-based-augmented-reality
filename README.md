@@ -30,7 +30,11 @@ python ar_app.py --marker my_marker.png --substitute my_substitute.png
 
 Hold up the marker object in front of the webcam to see the augmentation.
 
-`report.ipynb` contains a walkthrough of the pipeline and comparisons of different methods.
+## Report
+
+`report.ipynb` contains a walkthrough of the pipeline and comparisons of different methods. It is saved with its outputs, and `report.html` is the same report as a web page.
+
+To run the report again, open it and run all cells (about two minutes). Section 8 starts the live app, so the notebook waits there until `q` is pressed in the video window.
 
 ## Controls
 
@@ -52,6 +56,7 @@ The app opens two windows: the video, with the name of the current view at the t
 ```
 ar_app.py            Live webcam app and its GUI
 report.ipynb         The report: the pipeline step by step, the comparisons and the choices
+report.html          The report exported as a web page
 benchmark.py         Measures a configuration on the benchmark frames, for the report
 config.py            Paths, settings and the technique registries
 pipeline.py          Factories and stage functions of the pipeline
