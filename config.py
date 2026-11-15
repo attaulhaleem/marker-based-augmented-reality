@@ -14,6 +14,101 @@ FRAME_PATH = "data/frames/test_frame.png"
 # Folder where the live app saves the camera frames
 FRAMES_FOLDER = "data/frames"
 
+# Study frames: the saved camera frames the report compares the
+# techniques on. Every entry has the "condition" the frame tests, the
+# path of the "frame" and the path of the "marker" it shows.
+STUDY_FRAMES = {
+    "easy": {
+        "condition": "Reference",
+        "frame": "data/frames/easy.png",
+        "marker": "data/marker1.png",
+    },
+    "far": {
+        "condition": "Viewpoint: Distance",
+        "frame": "data/frames/far.png",
+        "marker": "data/marker1.png",
+    },
+    "rotated": {
+        "condition": "Viewpoint: Rotation",
+        "frame": "data/frames/rotated.png",
+        "marker": "data/marker1.png",
+    },
+    "tilt": {
+        "condition": "Viewpoint: Tilt",
+        "frame": "data/frames/tilt.png",
+        "marker": "data/marker1.png",
+    },
+    "tilt_steep": {
+        "condition": "Viewpoint: Steep Tilt",
+        "frame": "data/frames/tilt_steep.png",
+        "marker": "data/marker1.png",
+    },
+    "bright": {
+        "condition": "Lighting: Bright",
+        "frame": "data/frames/bright.png",
+        "marker": "data/marker1.png",
+    },
+    "dim": {
+        "condition": "Lighting: Dim",
+        "frame": "data/frames/dim.png",
+        "marker": "data/marker1.png",
+    },
+    "occluded": {
+        "condition": "Occlusion",
+        "frame": "data/frames/occluded.png",
+        "marker": "data/marker1.png",
+    },
+    "clutter": {
+        "condition": "Background Clutter",
+        "frame": "data/frames/clutter.png",
+        "marker": "data/marker1.png",
+    },
+    "weak_marker2": {
+        "condition": "Marker: Small Text",
+        "frame": "data/frames/weak_marker2.png",
+        "marker": "data/marker2.png",
+    },
+    "weak_marker3": {
+        "condition": "Marker: Flat Shapes",
+        "frame": "data/frames/weak_marker3.png",
+        "marker": "data/marker3.png",
+    },
+    "weak_marker4": {
+        "condition": "Marker: Text Only",
+        "frame": "data/frames/weak_marker4.png",
+        "marker": "data/marker4.png",
+    },
+}
+# Study sweeps: the settings the report varies one at a time, keyed by
+# the heading of their table. Every entry has the "stage" and the
+# "technique" the setting belongs to (the technique replaces the
+# selected one of that stage), the "setting" and the "values" it takes.
+STUDY_SWEEPS = {
+    "Features": {
+        "stage": "detector",
+        "technique": "SIFT",
+        "setting": "nfeatures",
+        # 0 keeps every keypoint
+        "values": (500, 1000, 2000, 0),
+    },
+    "Ratio": {
+        "stage": "filter",
+        "technique": "LOCAL",
+        "setting": "ratio",
+        "values": (0.5, 0.6, 0.7, 0.8, 0.9),
+    },
+    "Fraction": {
+        "stage": "filter",
+        "technique": "GLOBAL",
+        "setting": "fraction",
+        "values": (0.3, 0.4, 0.6, 0.8),
+    },
+}
+# A filtered match counts as an inlier in the study if the homography
+# maps its marker keypoint to within this many pixels of its frame
+# keypoint. One limit for every technique, so their counts compare.
+STUDY_MAX_ERROR = 3.0
+
 # Pipeline settings
 MARKER_MAX_SIDE = 1000
 CAMERA_INDEX = 1

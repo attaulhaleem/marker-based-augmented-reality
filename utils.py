@@ -306,6 +306,22 @@ def draw_text_rows(
     return image
 
 
+def format_table(rows):
+    """
+    Format `rows` (a list of dicts that all map the same column titles
+    to texts) as a Markdown table: one line of titles, then one line
+    per row. Returns the table as a string.
+    """
+    titles = list(rows[0])
+    lines = [
+        "| " + " | ".join(titles) + " |",
+        "| " + " | ".join("---" for _ in titles) + " |",
+    ]
+    for row in rows:
+        lines.append("| " + " | ".join(str(row[title]) for title in titles) + " |")
+    return "\n".join(lines)
+
+
 def plot_image(image, title="", size=8):
     """
     Show `image` (BGR or grayscale) in a `size` x `size` inch figure,
@@ -347,6 +363,17 @@ def plot_image_row(images, titles, size=20):
         axes.axis("off")
     figure.tight_layout()
     plt.show()
+
+
+def plot_image_grid(images, titles, images_per_row, size=20):
+    """
+    Show `images` (BGR or grayscale) in rows of `images_per_row`, each
+    with its entry of `titles` above it and no axes. Every row is a
+    figure `size` inches wide; the images should have the same shape.
+    """
+    for row_start in range(0, len(images), images_per_row):
+        row_end = row_start + images_per_row
+        plot_image_row(images[row_start:row_end], titles[row_start:row_end], size)
 
 
 def plot_keypoints(image, keypoints, title="", size=8):
