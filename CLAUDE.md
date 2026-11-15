@@ -14,7 +14,7 @@ Files:
 - VAR-BSC-Final-Project-2026.pdf: the assignment. Check it for requirements.
 - Marker AR Project Guide.html: the project guide (pipeline stages, GUI, study, report, pitfalls). Check it for the expected approach.
 - .venv: the project environment, with opencv-contrib-python 5.0.0. In this build AKAZE and BRISK are under cv.xfeatures2d, and SURF can't run (patented, compiled out).
-- data/: marker.png (the marker), frame.png (saved camera frame), substitute.png (image to warp onto the marker).
+- data/: marker1.png (the marker; marker2.png to marker4.png are weaker markers for the study), substitute1.png and substitute2.png (images to warp onto the marker), frames/ (saved camera frames: test_frame.png for the notebook, the others one per study condition).
 
 Design rules to keep:
 
@@ -41,7 +41,7 @@ GUI (ar_app.py, OpenCV HighGUI on macOS):
 - Limits of trackbars on this backend, which the design works around: a trackbar only shows a whole number (so the position counts steps, and the panel shows the real value); label and value share about 15 characters (so labels are short, Title Case, at most about 11 characters); a trackbar can't be removed or disabled (hence the window rebuild); the slider doesn't snap to positions. A selector trackbar must rest for config.SELECTOR_DELAY seconds before the technique switches; the keys switch at once.
 - All display text follows one casing: labels in Title Case, technique names as registered (SIFT, BF_CROSS, LOCAL).
 - Tkinter is not usable in this .venv: its Python is linked to Apple's Tk 8.5.9, which hangs when a window updates.
-- A GUI step can be checked without the camera: build MarkerArApp with the marker and substitute, call process_frame on data/frame.png, move sliders with cv.setTrackbarPos and press keys with handle_key.
+- A GUI step can be checked without the camera: build MarkerArApp with the marker and substitute, call process_frame on data/frames/test_frame.png, move sliders with cv.setTrackbarPos and press keys with handle_key.
 
 Code style:
 

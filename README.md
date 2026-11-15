@@ -61,8 +61,8 @@ views.py             Views of the live app
 utils.py             Image, geometry, drawing and plotting helpers
 requirements.txt     Python packages
 data/
-  marker.png         Marker
-  substitute.png     Image shown in place of the marker
-  frame.png          Saved camera frame used by the notebook
-  ...                Other images
+  marker1.png        Marker (marker2.png to marker4.png are other markers)
+  substitute1.png    Image shown in place of the marker (substitute2.png is another one)
+  frames/            Saved camera frames: test_frame.png is used by the notebook,
+                     the others show the marker in different conditions
 ```
