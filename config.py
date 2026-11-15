@@ -103,6 +103,30 @@ ESTIMATORS = {
             "min_inlier_count": 15,
         },
     },
+    "LEAST_SQUARES": {
+        "create": estimators.HomographyEstimator,
+        "settings": {
+            "method": 0,
+            "reprojection_threshold": 3.0,
+            "min_inlier_count": 15,
+        },
+    },
+    "LMEDS": {
+        "create": estimators.HomographyEstimator,
+        "settings": {
+            "method": cv.LMEDS,
+            "reprojection_threshold": 3.0,
+            "min_inlier_count": 15,
+        },
+    },
+    "PROSAC": {
+        "create": estimators.HomographyEstimator,
+        "settings": {
+            "method": cv.RHO,
+            "reprojection_threshold": 3.0,
+            "min_inlier_count": 15,
+        },
+    },
 }
 
 # Fail early if the selected techniques can't be used together

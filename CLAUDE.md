@@ -2,9 +2,9 @@ I'm building a marker-based augmented reality app in Python with OpenCV (course 
 
 Files:
 
-- walkthrough.ipynb: runs the pipeline step by step on one saved frame, reads config, does all plotting.
+- walkthrough.ipynb: runs the pipeline step by step on one saved frame, reads config, does all plotting. It compares every registered detector and every registered estimator side by side; the other cells run on the techniques selected in config.
 - ar_app.py: the live webcam app. Runs the pipeline on every camera frame and shows the result in an OpenCV window. Run it with `python ar_app.py`, not from the notebook.
-- config.py: paths, settings and the technique registries (DETECTORS, MATCHERS, FILTERS, ESTIMATORS).
+- config.py: paths, settings and the technique registries (DETECTORS, MATCHERS, FILTERS, ESTIMATORS). The selected names (DETECTOR_NAME and so on) are the app's choice.
 - pipeline.py: the build_x factories and the pipeline stage functions.
 - estimators.py: the homography estimator class (HomographyEstimator) and HomographyNotFoundError. Imports nothing from the project, so config.py can import it without a cycle.
 - filters.py: the match filter classes (RatioFilter, GlobalThresholdFilter). Imports nothing from the project, so config.py can import it without a cycle.
@@ -12,6 +12,7 @@ Files:
 - utils.py: general helpers (plotting, image, geometry).
 - VAR-BSC-Final-Project-2026.pdf: the assignment. Check it for requirements.
 - Marker AR Project Guide.html: the project guide (pipeline stages, GUI, study, report, pitfalls). Check it for the expected approach.
+- .venv: the project environment, with opencv-contrib-python 5.0.0. In this build AKAZE and BRISK are under cv.xfeatures2d, and SURF can't run (patented, compiled out).
 - data/: marker.png (the marker), frame.png (saved camera frame), substitute.png (image to warp onto the marker).
 
 Design rules to keep:
@@ -19,7 +20,7 @@ Design rules to keep:
 - Pipeline stages are pure functions in pipeline.py (parameters in, data out, no plotting). They may look up the registries by name, but never read settings such as DETECTOR_NAME; the notebook passes those in.
 - Every swappable technique is registered in config.py (see DETECTORS, MATCHERS, FILTERS and ESTIMATORS) as {"create": ..., "settings": {...}}. Each has a build_x(name) function that creates the technique and an apply_x stage function that takes the built object and runs it (build_detector and apply_detector, and so on).
 - config.py decides which techniques can be combined. A registry entry may carry extra keys for that: "norm" in DETECTORS, "filters" in MATCHERS (the filters that can use its matches). config.py checks the selected names itself when it is imported. The notebook never checks combinations.
-- A stage that can't produce its result raises the error itself (apply_estimator raises HomographyNotFoundError). The notebook never checks results or raises.
+- A stage that can't produce its result raises the error itself (apply_estimator raises HomographyNotFoundError). The notebook never checks results or raises. The one exception: a loop that compares techniques catches HomographyNotFoundError and prints it, so one failing technique doesn't stop the comparison.
 - The notebook only calls build_x and the stage functions. Anything else a technique needs (such as how many candidates a matcher returns) is internal to its class.
 - Settings are never hard-coded in the code. They live in the registry "settings" so the GUI can change them. The only exception is a value that stays constant in every case.
 - Every build_x goes through build_from_registry(registry, name, **overrides) in pipeline.py. Don't repeat the lookup and settings merge.
@@ -33,6 +34,7 @@ Code style:
 - Consistent names: plot_x for plotting helpers, draw_x for helpers that return the drawn image without showing it, build_x for factories, descriptive variable names (shown_match_count, not shown).
 - Formatting and import order are done by Black and isort on save. Don't dictate wrapping by hand.
 - Prefer plain, readable code over compact idioms.
+- Don't add comments that explain the code. Put the explanation in chat.
 
 How to work with me:
 
