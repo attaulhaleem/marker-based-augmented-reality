@@ -15,6 +15,8 @@ FRAME_PATH = "data/frame.png"
 # Settings
 MARKER_MAX_SIDE = 1000
 CAMERA_INDEX = 1
+# Camera used when CAMERA_INDEX can't be opened (0 is the built-in one)
+FALLBACK_CAMERA_INDEX = 0
 CAPTURE_NEW_FRAME = False
 # How much of the frame shows through the substitute: 0 replaces the
 # marker completely, 1 leaves the frame unchanged

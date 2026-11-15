@@ -1,3 +1,4 @@
+import argparse
 import time
 
 import cv2 as cv
@@ -21,6 +22,7 @@ from utils import (
     center_crop_to_size,
     draw_text_rows,
     load_image,
+    open_camera,
     select_best_matches,
     shrink_to_max_side,
 )
@@ -548,25 +550,45 @@ class MarkerArApp:
         ]
 
 
-def application():
+def parse_arguments():
     """
-    Run the live app: find the marker in every camera frame and show the
-    frame with the marker replaced by the substitute, above a status
+    Read the command line of the app. Returns the parsed arguments:
+    `marker` and `substitute`, the paths of the two images, which
+    default to the ones in config.
+    """
+    parser = argparse.ArgumentParser(description="Marker-based augmented reality")
+    parser.add_argument(
+        "--marker",
+        default=config.MARKER_PATH,
+        help=f"image of the marker to find (default: {config.MARKER_PATH})",
+    )
+    parser.add_argument(
+        "--substitute",
+        default=config.SUBSTITUTE_PATH,
+        help=f"image shown in place of the marker (default: {config.SUBSTITUTE_PATH})",
+    )
+    return parser.parse_args()
+
+
+def application(marker_path=config.MARKER_PATH, substitute_path=config.SUBSTITUTE_PATH):
+    """
+    Run the live app: find the marker (the image at `marker_path`) in
+    every camera frame and show the frame with the marker replaced by
+    the substitute (the image at `substitute_path`), above a status
     strip, until q is pressed.
     Pressing r resets every technique and setting to its config default,
     and d, m, f, e or v selects the next detector, matcher, filter,
     estimator or view.
-    Raises RuntimeError if the camera can't be opened.
+    Raises FileNotFoundError if an image can't be read and RuntimeError
+    if no camera can be opened.
     """
-    capture = cv.VideoCapture(config.CAMERA_INDEX)
-    if not capture.isOpened():
-        raise RuntimeError(f"Can't open camera {config.CAMERA_INDEX}")
-
-    marker = load_image(config.MARKER_PATH)
+    marker = load_image(marker_path)
     marker = shrink_to_max_side(marker, config.MARKER_MAX_SIDE)
 
-    substitute = load_image(config.SUBSTITUTE_PATH)
+    substitute = load_image(substitute_path)
     substitute = center_crop_to_size(substitute, marker.shape[1], marker.shape[0])
+
+    capture = open_camera(config.CAMERA_INDEX, config.FALLBACK_CAMERA_INDEX)
 
     app = MarkerArApp(marker, substitute)
     app.create_controls()
@@ -595,4 +617,5 @@ def application():
 
 
 if __name__ == "__main__":
-    application()
+    arguments = parse_arguments()
+    application(arguments.marker, arguments.substitute)

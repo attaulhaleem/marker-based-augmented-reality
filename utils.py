@@ -305,15 +305,38 @@ def center_crop_to_size(image, target_width, target_height):
     return cv.resize(cropped, (target_width, target_height))
 
 
-def grab_frame(camera_index, warmup_frames=30):
+def open_camera(camera_index, fallback_index=None):
     """
-    Open camera `camera_index`, let it warm up, and return one frame.
-    Raises RuntimeError if the camera can't be opened or gives no frame.
+    Open camera `camera_index`. If it can't be opened and
+    `fallback_index` is given, open that camera instead and print which
+    one is used. Returns the opened cv.VideoCapture.
+    Raises RuntimeError if no camera can be opened.
     """
     capture = cv.VideoCapture(camera_index)
+    if capture.isOpened():
+        return capture
+    capture.release()
 
-    if not capture.isOpened():
+    if fallback_index is None or fallback_index == camera_index:
         raise RuntimeError(f"Couldn't open camera {camera_index}")
+
+    capture = cv.VideoCapture(fallback_index)
+    if capture.isOpened():
+        print(f"Couldn't open camera {camera_index}, using camera {fallback_index}")
+        return capture
+    capture.release()
+
+    raise RuntimeError(f"Couldn't open camera {camera_index} or {fallback_index}")
+
+
+def grab_frame(camera_index, warmup_frames=30, fallback_index=None):
+    """
+    Open camera `camera_index` (or camera `fallback_index`, if given
+    and the first can't be opened), let it warm up, and return one
+    frame.
+    Raises RuntimeError if no camera can be opened or it gives no frame.
+    """
+    capture = open_camera(camera_index, fallback_index)
 
     frame = None
     try:
