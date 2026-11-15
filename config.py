@@ -1,6 +1,7 @@
 import cv2 as cv
 
 import filters
+import matchers
 
 # Input file paths
 MARKER_PATH = "data/marker.png"
@@ -14,6 +15,14 @@ MARKER_MAX_SIDE = 1000
 CAMERA_INDEX = 1
 CAPTURE_NEW_FRAME = False
 
+# Technique registries. Every entry has "create" (called with the
+# settings to build the technique) and "settings" (its defaults, which
+# the GUI can override). Some entries also say what the technique can
+# be combined with:
+# - DETECTORS "norm": the distance that compares its descriptors.
+# - MATCHERS "filters": the filters that can use its matches.
+# The selected techniques are checked at the bottom of this file.
+
 # Detectors
 DETECTOR_NAME = "SIFT"
 
@@ -25,12 +34,47 @@ DETECTORS = {
 MATCHER_NAME = "BF"
 
 MATCHERS = {
-    "BF": {"create": cv.BFMatcher, "settings": {}},
+    "BF": {
+        "create": matchers.BruteForceMatcher,
+        "settings": {"cross_check": False},
+        "filters": ("RATIO", "GLOBAL"),
+    },
+    "BF_CROSS": {
+        "create": matchers.BruteForceMatcher,
+        "settings": {"cross_check": True},
+        # Cross-check leaves one candidate, the ratio test needs two
+        "filters": ("GLOBAL",),
+    },
+    "FLANN": {
+        "create": matchers.FlannMatcher,
+        "settings": {
+            "trees": 5,
+            "checks": 50,
+            "table_number": 6,
+            "key_size": 12,
+            "multi_probe_level": 1,
+        },
+        "filters": ("RATIO", "GLOBAL"),
+    },
 }
 
 # Filters
 FILTER_NAME = "RATIO"
 
 FILTERS = {
-    "RATIO": {"create": filters.RatioFilter, "settings": {"ratio": 0.75}},
+    "RATIO": {
+        "create": filters.RatioFilter,
+        "settings": {"ratio": 0.75},
+    },
+    "GLOBAL": {
+        "create": filters.GlobalThresholdFilter,
+        "settings": {"fraction": 0.3},
+    },
 }
+
+# Fail early if the selected techniques can't be used together
+if FILTER_NAME not in MATCHERS[MATCHER_NAME]["filters"]:
+    raise ValueError(
+        f"Filter {FILTER_NAME} can't be used with matcher {MATCHER_NAME}. "
+        f"Its valid filters are {MATCHERS[MATCHER_NAME]['filters']}"
+    )

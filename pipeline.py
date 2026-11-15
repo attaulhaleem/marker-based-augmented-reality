@@ -39,18 +39,19 @@ def build_matcher(matcher_name, detector_name, **overrides):
     Keyword `overrides` replace the registered default settings.
     """
     norm = DETECTORS[detector_name]["norm"]
-    return build_from_registry(MATCHERS, matcher_name, normType=norm, **overrides)
+    return build_from_registry(MATCHERS, matcher_name, norm=norm, **overrides)
 
 
-def match_descriptors(matcher, query_descriptors, train_descriptors, k=2):
+def match_descriptors(matcher, query_descriptors, train_descriptors):
     """
-    For each query descriptor, find its `k` nearest train descriptors.
-    Returns one list of up to `k` DMatch per query descriptor, best first,
-    or an empty list if either descriptor set is None.
+    For each query descriptor, find its nearest train descriptors with
+    `matcher`. Returns one list of DMatch candidates per query
+    descriptor, best first (how many depends on the matcher), or an
+    empty list if either descriptor set is None.
     """
     if query_descriptors is None or train_descriptors is None:
         return []
-    return matcher.knnMatch(query_descriptors, train_descriptors, k=k)
+    return matcher.knn_match(query_descriptors, train_descriptors)
 
 
 def build_filter(filter_name, **overrides):
