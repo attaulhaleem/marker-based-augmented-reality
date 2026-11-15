@@ -30,7 +30,7 @@ python ar_app.py --marker my_marker.png --substitute my_substitute.png
 
 Hold up the marker object in front of the webcam to see the augmentation.
 
-For a step-by-step walkthrough of the pipeline on one saved frame: open `walkthrough.ipynb` and run all cells.
+For the report, with a step-by-step walkthrough of the pipeline on saved frames: open `report.ipynb` and run all cells.
 
 ## Controls
 
@@ -51,7 +51,7 @@ The app opens two windows: the video, and a Controls window with sliders for sel
 
 ```
 ar_app.py            Live webcam app and its GUI
-walkthrough.ipynb    The pipeline step by step on one saved frame
+report.ipynb         The report: the pipeline step by step on saved frames
 config.py            Paths, settings and the technique registries
 pipeline.py          Factories and stage functions of the pipeline
 matchers.py          Brute-force and FLANN matchers

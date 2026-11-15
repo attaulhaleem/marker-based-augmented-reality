@@ -2,7 +2,7 @@ I'm building a marker-based augmented reality app in Python with OpenCV (course 
 
 Files:
 
-- walkthrough.ipynb: runs the pipeline step by step on one saved frame, reads config, does all plotting. It compares every registered detector and every registered estimator side by side; the other cells run on the techniques selected in config.
+- report.ipynb: the report. Runs the pipeline step by step on one saved frame, reads config, does all plotting. It compares every registered detector and every registered estimator side by side; the other cells run on the techniques selected in config.
 - ar_app.py: the live webcam app and its GUI (see "GUI" below). Runs the pipeline on every camera frame and shows the selected view in an OpenCV window. Run it with `python ar_app.py`, not from the notebook.
 - config.py: paths, settings, GUI settings and the technique registries (DETECTORS, MATCHERS, FILTERS, ESTIMATORS, VIEWS). The selected names (DETECTOR_NAME and so on) are what the app starts with and resets to.
 - pipeline.py: the build_x factories and the pipeline stage functions.
