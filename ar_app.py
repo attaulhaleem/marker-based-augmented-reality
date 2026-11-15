@@ -1,6 +1,7 @@
 import time
 
 import cv2 as cv
+import numpy as np
 
 import config
 from estimators import HomographyNotFoundError
@@ -20,6 +21,7 @@ from utils import (
     center_crop_to_size,
     draw_text_rows,
     load_image,
+    select_best_matches,
     shrink_to_max_side,
 )
 from views import FrameResult
@@ -183,6 +185,11 @@ class MarkerArApp:
 
         self.requested_names = {}
         self.request_time = 0.0
+
+        self.result = None
+        self.stage_seconds = {}
+        self.frame_start_time = None
+        self.frame_seconds = None
 
         for stage in self.stages.values():
             stage.rebuild()
@@ -433,13 +440,25 @@ class MarkerArApp:
     def process_frame(self, frame):
         """
         Run the pipeline on `frame`. Returns what the selected view
-        draws of the result, as an image.
+        draws of the result, as an image. Also keeps the result and
+        how long every stage took, for get_status_rows.
         """
+        start_time = time.perf_counter()
+        if self.frame_start_time is not None:
+            self.frame_seconds = start_time - self.frame_start_time
+        self.frame_start_time = start_time
+        stage_end_times = []
+
         frame_keypoints, frame_descriptors = apply_detector(self.detector, frame)
+        stage_end_times.append(time.perf_counter())
+
         knn_matches = apply_matcher(
             self.matcher, self.marker_descriptors, frame_descriptors
         )
+        stage_end_times.append(time.perf_counter())
+
         good_matches = apply_filter(self.match_filter, knn_matches)
+        stage_end_times.append(time.perf_counter())
 
         try:
             homography, inlier_mask = apply_estimator(
@@ -448,8 +467,9 @@ class MarkerArApp:
         except HomographyNotFoundError:
             homography = None
             inlier_mask = None
+        stage_end_times.append(time.perf_counter())
 
-        result = FrameResult(
+        self.result = FrameResult(
             self.marker,
             self.marker_keypoints,
             self.substitute,
@@ -460,13 +480,67 @@ class MarkerArApp:
             homography,
             inlier_mask,
         )
-        return apply_view(self.view, result)
+        view_image = apply_view(self.view, self.result)
+        stage_end_times.append(time.perf_counter())
+
+        stage_start_time = start_time
+        for stage, stage_end_time in zip(self.stages.values(), stage_end_times):
+            self.stage_seconds[stage.label] = stage_end_time - stage_start_time
+            stage_start_time = stage_end_time
+
+        return view_image
+
+    def get_status_rows(self):
+        """
+        Return what the status strip shows about the last processed
+        frame, as a list of (heading, text) pairs: whether the marker
+        was found, the keypoint counts, the match counts after every
+        stage, and the time every stage took. The list is empty before
+        the first frame.
+        """
+        if self.result is None:
+            return []
+        result = self.result
+
+        if result.homography is None:
+            status = "Marker Not Found"
+            inlier_count = 0
+        else:
+            status = "Marker Found"
+            inlier_count = int(result.inlier_mask.sum())
+
+        keypoint_text = (
+            f"Marker: {len(result.marker_keypoints)}, "
+            f"Frame: {len(result.frame_keypoints)}"
+        )
+        match_text = (
+            f"Unfiltered: {len(select_best_matches(result.knn_matches))}, "
+            f"Filtered: {len(result.matches)}, "
+            f"Inliers: {inlier_count}"
+        )
+
+        time_texts = []
+        for label, seconds in self.stage_seconds.items():
+            time_texts.append(f"{label}: {seconds * 1000:.0f} ms")
+        if self.frame_seconds is not None:
+            frame_rate = 1 / self.frame_seconds
+            time_texts.append(
+                f"Frame: {self.frame_seconds * 1000:.0f} ms ({frame_rate:.1f} FPS)"
+            )
+
+        return [
+            ("Status", status),
+            ("Keypoints", keypoint_text),
+            ("Matches", match_text),
+            ("Time", ", ".join(time_texts)),
+        ]
 
 
 def application():
     """
     Run the live app: find the marker in every camera frame and show the
-    frame with the marker replaced by the substitute, until q is pressed.
+    frame with the marker replaced by the substitute, above a status
+    strip, until q is pressed.
     Pressing r resets every technique and setting to its config default,
     and d, m, f, e or v selects the next detector, matcher, filter,
     estimator or view.
@@ -494,7 +568,10 @@ def application():
         app.show_panel()
         shown_view = app.process_frame(frame)
         shown_view = shrink_to_max_side(shown_view, config.DISPLAY_MAX_SIDE)
-        cv.imshow(WINDOW_NAME, shown_view)
+        status_strip = draw_text_rows(
+            app.get_status_rows(), shown_view.shape[1], config.STATUS_TEXT_SCALE
+        )
+        cv.imshow(WINDOW_NAME, np.vstack([shown_view, status_strip]))
 
         key = cv.waitKey(5)
         if key == ord(QUIT_KEY):

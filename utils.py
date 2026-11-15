@@ -189,6 +189,7 @@ def plot_outline(image, corners, title="", size=8):
 def draw_text_rows(
     rows,
     width,
+    text_scale=1.0,
     row_height=30,
     heading_width=130,
     margin=14,
@@ -201,8 +202,15 @@ def draw_text_rows(
     image `width` pixels wide: one row per pair, `row_height` pixels
     high, with the heading in a left column `heading_width` pixels wide
     and the text right of it. `margin` is the space around the table,
-    and the colours are BGR. Returns the image.
+    and the colours are BGR. `text_scale` enlarges the text together
+    with the row height, the heading column and the margin (2 doubles
+    them). Returns the image.
     """
+    row_height = round(row_height * text_scale)
+    heading_width = round(heading_width * text_scale)
+    margin = round(margin * text_scale)
+    font_scale = font_scale * text_scale
+
     height = 2 * margin + row_height * len(rows)
     image = np.full((height, width, 3), background_color, np.uint8)
 

@@ -24,6 +24,9 @@ FRAME_ALPHA = 0.2
 SELECTOR_DELAY = 0.5
 # Longest side in pixels of the shown view: larger views are shrunk
 DISPLAY_MAX_SIDE = 1920
+# Size of the text in the status strip under the view: 1 is the text
+# size of the controls panel
+STATUS_TEXT_SCALE = 1.4
 # Width in pixels of the panel under the sliders, which also sets the
 # width of the controls window
 PANEL_WIDTH = 420
