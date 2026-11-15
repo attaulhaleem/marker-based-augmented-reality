@@ -9,19 +9,20 @@ from pipeline import (
     apply_estimator,
     apply_filter,
     apply_matcher,
+    apply_view,
     build_detector,
     build_estimator,
     build_filter,
     build_matcher,
+    build_view,
 )
 from utils import (
     center_crop_to_size,
     draw_text_rows,
     load_image,
-    overlay_image,
     shrink_to_max_side,
-    warp_image,
 )
+from views import FrameResult
 
 WINDOW_NAME = "Marker-based Augmented Reality"
 CONTROLS_WINDOW_NAME = "Controls"
@@ -177,6 +178,7 @@ class MarkerArApp:
             "estimator": Stage(
                 "estimator", config.ESTIMATOR_NAME, self.rebuild_estimator
             ),
+            "view": Stage("view", config.VIEW_NAME, self.rebuild_view),
         }
 
         self.requested_names = {}
@@ -229,6 +231,13 @@ class MarkerArApp:
         """
         stage = self.stages["estimator"]
         self.estimator = build_estimator(stage.name, **stage.get_settings())
+
+    def rebuild_view(self):
+        """
+        Build the view with its current settings.
+        """
+        stage = self.stages["view"]
+        self.view = build_view(stage.name, **stage.get_settings())
 
     def change_setting(self, stage_name, setting_name, value):
         """
@@ -423,9 +432,8 @@ class MarkerArApp:
 
     def process_frame(self, frame):
         """
-        Run the pipeline on `frame`. Returns the frame with the marker
-        replaced by the substitute, or the plain frame if the marker is
-        not found.
+        Run the pipeline on `frame`. Returns what the selected view
+        draws of the result, as an image.
         """
         frame_keypoints, frame_descriptors = apply_detector(self.detector, frame)
         knn_matches = apply_matcher(
@@ -438,15 +446,21 @@ class MarkerArApp:
                 self.estimator, self.marker_keypoints, frame_keypoints, good_matches
             )
         except HomographyNotFoundError:
-            return frame
+            homography = None
+            inlier_mask = None
 
-        frame_height, frame_width = frame.shape[:2]
-        warped_substitute, substitute_mask = warp_image(
-            self.substitute, homography, frame_width, frame_height
+        result = FrameResult(
+            self.marker,
+            self.marker_keypoints,
+            self.substitute,
+            frame,
+            frame_keypoints,
+            knn_matches,
+            good_matches,
+            homography,
+            inlier_mask,
         )
-        return overlay_image(
-            frame, warped_substitute, substitute_mask, config.FRAME_ALPHA
-        )
+        return apply_view(self.view, result)
 
 
 def application():
@@ -454,8 +468,8 @@ def application():
     Run the live app: find the marker in every camera frame and show the
     frame with the marker replaced by the substitute, until q is pressed.
     Pressing r resets every technique and setting to its config default,
-    and d, m, f or e selects the next detector, matcher, filter or
-    estimator.
+    and d, m, f, e or v selects the next detector, matcher, filter,
+    estimator or view.
     Raises RuntimeError if the camera can't be opened.
     """
     capture = cv.VideoCapture(config.CAMERA_INDEX)
@@ -478,7 +492,9 @@ def application():
 
         app.apply_requested_techniques()
         app.show_panel()
-        cv.imshow(WINDOW_NAME, app.process_frame(frame))
+        shown_view = app.process_frame(frame)
+        shown_view = shrink_to_max_side(shown_view, config.DISPLAY_MAX_SIDE)
+        cv.imshow(WINDOW_NAME, shown_view)
 
         key = cv.waitKey(5)
         if key == ord(QUIT_KEY):

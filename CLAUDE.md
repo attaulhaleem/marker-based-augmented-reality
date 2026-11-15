@@ -9,6 +9,7 @@ Files:
 - estimators.py: the homography estimator class (HomographyEstimator) and HomographyNotFoundError. Imports nothing from the project, so config.py can import it without a cycle.
 - filters.py: the match filter classes (LocalRatioFilter, GlobalThresholdFilter). Imports nothing from the project, so config.py can import it without a cycle.
 - matchers.py: the matcher classes (BruteForceMatcher, FlannMatcher). Imports nothing from the project, so config.py can import it without a cycle.
+- views.py: the view classes of the live app (AugmentedView, KeypointsView, UnfilteredMatchesView, FilteredMatchesView, InlierMatchesView) and FrameResult, what a view draws. Imports only utils.py, so config.py can import it without a cycle.
 - utils.py: general helpers (plotting, image, geometry).
 - VAR-BSC-Final-Project-2026.pdf: the assignment. Check it for requirements.
 - Marker AR Project Guide.html: the project guide (pipeline stages, GUI, study, report, pitfalls). Check it for the expected approach.

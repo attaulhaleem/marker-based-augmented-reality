@@ -81,6 +81,24 @@ def plot_keypoints(image, keypoints, title="", size=8):
     plot_image(draw_keypoints(image, keypoints), title, size)
 
 
+def draw_matches(query_image, query_keypoints, train_image, train_keypoints, matches):
+    """
+    Return an image of both images side by side with a line joining
+    each matched pair of keypoints. `matches` is a flat list of DMatch
+    whose queryIdx and trainIdx index into `query_keypoints` and
+    `train_keypoints`.
+    """
+    return cv.drawMatches(
+        query_image,
+        query_keypoints,
+        train_image,
+        train_keypoints,
+        matches,
+        None,
+        flags=cv.DRAW_MATCHES_FLAGS_NOT_DRAW_SINGLE_POINTS,
+    )
+
+
 def plot_matches(
     query_image,
     query_keypoints,
@@ -95,14 +113,8 @@ def plot_matches(
     of keypoints. `matches` is a flat list of DMatch whose queryIdx and
     trainIdx index into `query_keypoints` and `train_keypoints`.
     """
-    image_with_matches = cv.drawMatches(
-        query_image,
-        query_keypoints,
-        train_image,
-        train_keypoints,
-        matches,
-        None,
-        flags=cv.DRAW_MATCHES_FLAGS_NOT_DRAW_SINGLE_POINTS,
+    image_with_matches = draw_matches(
+        query_image, query_keypoints, train_image, train_keypoints, matches
     )
     plot_image(image_with_matches, title, size)
 

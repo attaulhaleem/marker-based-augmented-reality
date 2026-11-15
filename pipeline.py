@@ -1,7 +1,7 @@
 import cv2 as cv
 import numpy as np
 
-from config import DETECTORS, ESTIMATORS, FILTERS, MATCHERS
+from config import DETECTORS, ESTIMATORS, FILTERS, MATCHERS, VIEWS
 
 
 def build_from_registry(registry, name, **overrides):
@@ -96,3 +96,19 @@ def apply_estimator(estimator, query_keypoints, train_keypoints, matches):
         train_points.append(train_keypoints[match.trainIdx].pt)
 
     return estimator.estimate(np.float32(query_points), np.float32(train_points))
+
+
+def build_view(view_name, **overrides):
+    """
+    Create the view registered as `view_name` in VIEWS. Keyword
+    `overrides` replace the registered default settings.
+    """
+    return build_from_registry(VIEWS, view_name, **overrides)
+
+
+def apply_view(view, result):
+    """
+    Draw `result` (a FrameResult: what the pipeline found in one frame)
+    with `view`. Returns the drawn image.
+    """
+    return view.draw(result)

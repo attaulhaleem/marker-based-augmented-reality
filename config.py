@@ -3,6 +3,7 @@ import cv2 as cv
 import estimators
 import filters
 import matchers
+import views
 
 # Input file paths
 MARKER_PATH = "data/marker.png"
@@ -21,6 +22,8 @@ FRAME_ALPHA = 0.2
 # Seconds a technique selector has to rest before the GUI switches to
 # the technique, so dragging past the others doesn't switch to each
 SELECTOR_DELAY = 0.5
+# Longest side in pixels of the shown view: larger views are shrunk
+DISPLAY_MAX_SIDE = 1920
 # Width in pixels of the panel under the sliders, which also sets the
 # width of the controls window
 PANEL_WIDTH = 420
@@ -30,6 +33,7 @@ SELECTOR_LABELS = {
     "matcher": "Matcher",
     "filter": "Filter",
     "estimator": "Estimator",
+    "view": "View",
 }
 
 # Key that selects the next technique of each stage
@@ -38,6 +42,7 @@ SELECTOR_KEYS = {
     "matcher": "m",
     "filter": "f",
     "estimator": "e",
+    "view": "v",
 }
 
 # Technique registries. Every entry has "create" (called with the
@@ -241,6 +246,40 @@ ESTIMATORS = {
 }
 
 
+# Views: what the app shows of a processed frame
+VIEW_NAME = "AUGMENTED"
+
+VIEWS = {
+    "AUGMENTED": {
+        "create": views.AugmentedView,
+        "settings": {"frame_alpha": FRAME_ALPHA},
+        "controls": {
+            "frame_alpha": {
+                "label": "Alpha",
+                "minimum": 0.0,
+                "maximum": 1.0,
+                "step": 0.01,
+            },
+        },
+    },
+    "KEYPOINTS": {"create": views.KeypointsView, "settings": {}},
+    "UNFILTERED": {
+        "create": views.UnfilteredMatchesView,
+        "settings": {"shown_match_count": 100},
+        "controls": {
+            "shown_match_count": {
+                "label": "Shown",
+                "minimum": 10,
+                "maximum": 1000,
+                "step": 1,
+            },
+        },
+    },
+    "FILTERED": {"create": views.FilteredMatchesView, "settings": {}},
+    "INLIERS": {"create": views.InlierMatchesView, "settings": {}},
+}
+
+
 def get_valid_filter_names(matcher_name):
     """
     Return the names of the filters that can use the matches of the
@@ -326,6 +365,7 @@ REGISTRIES = {
     "matcher": MATCHERS,
     "filter": FILTERS,
     "estimator": ESTIMATORS,
+    "view": VIEWS,
 }
 
 # Fail early if a control doesn't fit its setting or a label is reused
