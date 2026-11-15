@@ -25,7 +25,10 @@ FRAME_ALPHA = 0.2
 # be combined with:
 # - DETECTORS "norm": the distance that compares its descriptors.
 # - MATCHERS "filters": the filters that can use its matches.
-# The selected techniques are checked at the bottom of this file.
+# An entry can also have "controls": the settings the GUI shows a
+# slider for, each with its "label", "minimum", "maximum" and "step".
+# The selected techniques and the controls are checked at the bottom
+# of this file.
 
 # Detectors
 DETECTOR_NAME = "SIFT"
@@ -84,10 +87,26 @@ FILTERS = {
     "RATIO": {
         "create": filters.RatioFilter,
         "settings": {"ratio": 0.7},
+        "controls": {
+            "ratio": {
+                "label": "Ratio",
+                "minimum": 0.5,
+                "maximum": 0.95,
+                "step": 0.01,
+            },
+        },
     },
     "GLOBAL": {
         "create": filters.GlobalThresholdFilter,
         "settings": {"fraction": 0.3},
+        "controls": {
+            "fraction": {
+                "label": "Fraction",
+                "minimum": 0.05,
+                "maximum": 1.0,
+                "step": 0.01,
+            },
+        },
     },
 }
 
@@ -135,3 +154,39 @@ if FILTER_NAME not in MATCHERS[MATCHER_NAME]["filters"]:
         f"Filter {FILTER_NAME} can't be used with matcher {MATCHER_NAME}. "
         f"Its valid filters are {MATCHERS[MATCHER_NAME]['filters']}"
     )
+
+
+def check_controls(registry):
+    """
+    Check the "controls" of every entry in `registry`.
+    Raises ValueError if a control has no setting of the same name, if
+    its minimum is not below its maximum, or if the setting's default
+    is outside that range.
+    """
+    for technique_name, entry in registry.items():
+        for setting_name, control in entry.get("controls", {}).items():
+            if setting_name not in entry["settings"]:
+                raise ValueError(
+                    f"Control {setting_name} of {technique_name} has no "
+                    f"setting of that name"
+                )
+
+            minimum = control["minimum"]
+            maximum = control["maximum"]
+            if minimum >= maximum:
+                raise ValueError(
+                    f"Control {setting_name} of {technique_name} needs a "
+                    f"minimum below its maximum, got {minimum} and {maximum}"
+                )
+
+            default = entry["settings"][setting_name]
+            if default < minimum or default > maximum:
+                raise ValueError(
+                    f"Setting {setting_name} of {technique_name} is {default}, "
+                    f"outside its control range {minimum} to {maximum}"
+                )
+
+
+# Fail early if a control doesn't fit its setting
+for registry in (DETECTORS, MATCHERS, FILTERS, ESTIMATORS):
+    check_controls(registry)

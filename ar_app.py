@@ -23,6 +23,34 @@ from utils import (
 WINDOW_NAME = "Marker AR"
 
 
+def create_setting_trackbar(window_name, setting_name, control, value, on_change):
+    """
+    Add a trackbar for the setting `setting_name` to the window
+    `window_name`. `control` is the setting's entry in a registry
+    "controls" (label, minimum, maximum, step) and `value` is where the
+    slider starts. A trackbar only holds whole numbers, so its position
+    counts steps. When the slider moves, `on_change` is called with
+    `setting_name` and the new setting value.
+    """
+    step = control["step"]
+
+    def on_position_change(position):
+        """
+        Trackbar callback: turn the slider `position` into the setting
+        value and pass it on.
+        """
+        on_change(setting_name, position * step)
+
+    cv.createTrackbar(
+        control["label"],
+        window_name,
+        round(value / step),
+        round(control["maximum"] / step),
+        on_position_change,
+    )
+    cv.setTrackbarMin(control["label"], window_name, round(control["minimum"] / step))
+
+
 def application():
     """
     Run the live app: find the marker in every camera frame and show the
@@ -43,6 +71,28 @@ def application():
     matcher = build_matcher(config.MATCHER_NAME, config.DETECTOR_NAME)
     match_filter = build_filter(config.FILTER_NAME)
     estimator = build_estimator(config.ESTIMATOR_NAME)
+
+    filter_entry = config.FILTERS[config.FILTER_NAME]
+    filter_settings = dict(filter_entry["settings"])
+
+    def on_filter_setting_change(setting_name, value):
+        """
+        Store the new `value` of the filter setting `setting_name` and
+        rebuild the match filter with it.
+        """
+        nonlocal match_filter
+        filter_settings[setting_name] = value
+        match_filter = build_filter(config.FILTER_NAME, **filter_settings)
+
+    cv.namedWindow(WINDOW_NAME)
+    for setting_name, control in filter_entry.get("controls", {}).items():
+        create_setting_trackbar(
+            WINDOW_NAME,
+            setting_name,
+            control,
+            filter_settings[setting_name],
+            on_filter_setting_change,
+        )
 
     marker_keypoints, marker_descriptors = apply_detector(detector, marker)
 
