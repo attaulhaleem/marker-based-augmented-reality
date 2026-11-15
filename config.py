@@ -24,12 +24,15 @@ FRAME_ALPHA = 0.2
 SELECTOR_DELAY = 0.5
 # Longest side in pixels of the shown view: larger views are shrunk
 DISPLAY_MAX_SIDE = 1920
-# Size of the text in the status strip under the view: 1 is the text
-# size of the controls panel
+# Size of the text in the controls panel and in the status strip under
+# the view: 1 is the standard size of utils.draw_text_rows
+PANEL_TEXT_SCALE = 0.85
 STATUS_TEXT_SCALE = 1.4
 # Width in pixels of the panel under the sliders, which also sets the
 # width of the controls window
 PANEL_WIDTH = 420
+# Number of keys listed in one row of the panel
+PANEL_KEYS_PER_ROW = 3
 # Label of the slider that selects the technique of each stage
 SELECTOR_LABELS = {
     "detector": "Detector",

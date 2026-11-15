@@ -400,13 +400,26 @@ class MarkerArApp:
         cv.destroyWindow(CONTROLS_WINDOW_NAME)
         self.create_controls()
 
+    def get_key_texts(self, stage_action=""):
+        """
+        Return one text per key of the app, as a list: the key and what
+        it does. For the key of a stage that is `stage_action` followed
+        by the stage label, such as "d: Next Detector".
+        """
+        key_texts = []
+        for stage in self.stages.values():
+            key_texts.append(f"{stage.key}: {stage_action}{stage.label}")
+        key_texts.append(f"{RESET_KEY}: Reset")
+        key_texts.append(f"{QUIT_KEY}: Quit")
+        return key_texts
+
     def get_panel_rows(self):
         """
         Return what the controls panel shows, as a list of (heading,
         text) pairs: for every stage its label with the selected
         technique, then one row per control with its label and the
-        current value of its setting, and last one row per key of the
-        app.
+        current value of its setting, and last the keys of the app,
+        config.PANEL_KEYS_PER_ROW to a row.
         """
         rows = []
         for stage in self.stages.values():
@@ -416,15 +429,11 @@ class MarkerArApp:
                 value = settings[setting_name]
                 rows.append(("", f"{control['label']}: {value:g}"))
 
-        key_texts = []
-        for stage in self.stages.values():
-            key_texts.append(f"{stage.key}: Next {stage.label}")
-        key_texts.append(f"{RESET_KEY}: Reset")
-        key_texts.append(f"{QUIT_KEY}: Quit")
-
+        key_texts = self.get_key_texts()
         heading = "Keys"
-        for key_text in key_texts:
-            rows.append((heading, key_text))
+        for row_start in range(0, len(key_texts), config.PANEL_KEYS_PER_ROW):
+            row_texts = key_texts[row_start : row_start + config.PANEL_KEYS_PER_ROW]
+            rows.append((heading, ", ".join(row_texts)))
             heading = ""
         return rows
 
@@ -434,7 +443,9 @@ class MarkerArApp:
         selected techniques by name and the real values of their
         settings, which the sliders can only show as whole numbers.
         """
-        panel = draw_text_rows(self.get_panel_rows(), config.PANEL_WIDTH)
+        panel = draw_text_rows(
+            self.get_panel_rows(), config.PANEL_WIDTH, config.PANEL_TEXT_SCALE
+        )
         cv.imshow(CONTROLS_WINDOW_NAME, panel)
 
     def process_frame(self, frame):
@@ -495,8 +506,8 @@ class MarkerArApp:
         Return what the status strip shows about the last processed
         frame, as a list of (heading, text) pairs: whether the marker
         was found, the keypoint counts, the match counts after every
-        stage, and the time every stage took. The list is empty before
-        the first frame.
+        stage, the time every stage took, and the keys of the app. The
+        list is empty before the first frame.
         """
         if self.result is None:
             return []
@@ -533,6 +544,7 @@ class MarkerArApp:
             ("Keypoints", keypoint_text),
             ("Matches", match_text),
             ("Time", ", ".join(time_texts)),
+            ("Keys", ", ".join(self.get_key_texts("Next "))),
         ]
 
 
