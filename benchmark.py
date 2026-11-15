@@ -1,13 +1,12 @@
 import cv2 as cv
 import numpy as np
 
-from ar_app import StageTimer
 from estimators import HomographyNotFoundError
 from pipeline import (apply_detector, apply_estimator, apply_filter,
                       apply_matcher, build_detector, build_estimator,
                       build_filter, build_matcher)
-from utils import (center_crop_to_size, count_best_matches, draw_outline,
-                   load_image, overlay_image, project_corners,
+from utils import (StageTimer, center_crop_to_size, count_best_matches,
+                   draw_outline, load_image, overlay_image, project_corners,
                    shrink_to_max_side, warp_image)
 
 # Text shown in a table where a frame has no value (marker not found)
@@ -50,20 +49,20 @@ class PipelineMeasurement:
         self.stage_seconds = stage_seconds
 
 
-def load_study_images(study_frames, marker_max_side):
+def load_benchmark_images(benchmark_frames, marker_max_side):
     """
-    Read the images of `study_frames` (config.STUDY_FRAMES: for every
+    Read the images of `benchmark_frames` (config.BENCHMARK_FRAMES: for every
     frame name, the paths of its "frame" and its "marker"). Markers are
     shrunk to `marker_max_side`. Returns {frame_name: (marker, frame)}.
     Raises FileNotFoundError if an image can't be read.
     """
-    study_images = {}
-    for frame_name, entry in study_frames.items():
+    benchmark_images = {}
+    for frame_name, entry in benchmark_frames.items():
         marker = load_image(entry["marker"])
         marker = shrink_to_max_side(marker, marker_max_side)
         frame = load_image(entry["frame"])
-        study_images[frame_name] = (marker, frame)
-    return study_images
+        benchmark_images[frame_name] = (marker, frame)
+    return benchmark_images
 
 
 def count_close_matches(
@@ -168,14 +167,14 @@ def measure_pipeline(marker, frame, technique_names, max_error, overrides=None):
     )
 
 
-def measure_frames(study_images, technique_names, max_error, overrides=None):
+def measure_frames(benchmark_images, technique_names, max_error, overrides=None):
     """
-    Run measure_pipeline on every frame of `study_images`
+    Run measure_pipeline on every frame of `benchmark_images`
     ({frame_name: (marker, frame)}) with the same `technique_names`,
     `max_error` and `overrides`. Returns {frame_name: measurement}.
     """
     measurements = {}
-    for frame_name, (marker, frame) in study_images.items():
+    for frame_name, (marker, frame) in benchmark_images.items():
         measurements[frame_name] = measure_pipeline(
             marker, frame, technique_names, max_error, overrides
         )
@@ -183,7 +182,7 @@ def measure_frames(study_images, technique_names, max_error, overrides=None):
 
 
 def measure_techniques(
-    study_images, technique_names, stage_name, stage_technique_names, max_error
+    benchmark_images, technique_names, stage_name, stage_technique_names, max_error
 ):
     """
     Compare the techniques of one stage: run measure_frames once per
@@ -195,15 +194,15 @@ def measure_techniques(
     for stage_technique_name in stage_technique_names:
         compared_names = {**technique_names, stage_name: stage_technique_name}
         measurements_by_name[stage_technique_name] = measure_frames(
-            study_images, compared_names, max_error
+            benchmark_images, compared_names, max_error
         )
     return measurements_by_name
 
 
-def measure_sweep(study_images, technique_names, sweep, max_error):
+def measure_sweep(benchmark_images, technique_names, sweep, max_error):
     """
     Vary one setting: run measure_frames once per value of `sweep` (an
-    entry of config.STUDY_SWEEPS: the "stage" and "technique" the
+    entry of config.BENCHMARK_SWEEPS: the "stage" and "technique" the
     "setting" belongs to and the "values" it takes), with the other
     stages as in `technique_names`.
     Returns {value_text: {frame_name: measurement}}.
@@ -215,7 +214,7 @@ def measure_sweep(study_images, technique_names, sweep, max_error):
     for value in sweep["values"]:
         overrides = {stage_name: {sweep["setting"]: value}}
         measurements_by_value[f"{value:g}"] = measure_frames(
-            study_images, swept_names, max_error, overrides
+            benchmark_images, swept_names, max_error, overrides
         )
     return measurements_by_value
 
@@ -270,10 +269,10 @@ def build_summary_rows(heading, measurements_by_name):
     return rows
 
 
-def build_frame_rows(study_frames, measurements):
+def build_frame_rows(benchmark_frames, measurements):
     """
-    List what one configuration measured on every frame. `study_frames`
-    is config.STUDY_FRAMES and `measurements` is {frame_name:
+    List what one configuration measured on every frame. `benchmark_frames`
+    is config.BENCHMARK_FRAMES and `measurements` is {frame_name:
     measurement}. Returns one table row (a dict of column title to
     text) per frame: its condition, the keypoint counts of the marker
     and the frame, the filtered match count, the inlier count and
@@ -288,7 +287,7 @@ def build_frame_rows(study_frames, measurements):
         rows.append(
             {
                 "Frame": frame_name,
-                "Condition": study_frames[frame_name]["condition"],
+                "Condition": benchmark_frames[frame_name]["condition"],
                 "Marker Keypoints": str(measurement.marker_keypoint_count),
                 "Frame Keypoints": str(measurement.frame_keypoint_count),
                 "Filtered": str(measurement.filtered_match_count),

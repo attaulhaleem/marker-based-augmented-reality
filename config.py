@@ -14,10 +14,10 @@ FRAME_PATH = "data/frames/test_frame.png"
 # Folder where the live app saves the camera frames
 FRAMES_FOLDER = "data/frames"
 
-# Study frames: the saved camera frames the report compares the
+# Benchmark frames: the saved camera frames the report compares the
 # techniques on. Every entry has the "condition" the frame tests, the
 # path of the "frame" and the path of the "marker" it shows.
-STUDY_FRAMES = {
+BENCHMARK_FRAMES = {
     "easy": {
         "condition": "Reference",
         "frame": "data/frames/easy.png",
@@ -79,11 +79,11 @@ STUDY_FRAMES = {
         "marker": "data/marker4.png",
     },
 }
-# Study sweeps: the settings the report varies one at a time, keyed by
+# Benchmark sweeps: the settings the report varies one at a time, keyed by
 # the heading of their table. Every entry has the "stage" and the
 # "technique" the setting belongs to (the technique replaces the
 # selected one of that stage), the "setting" and the "values" it takes.
-STUDY_SWEEPS = {
+BENCHMARK_SWEEPS = {
     "Features": {
         "stage": "detector",
         "technique": "SIFT",
@@ -104,10 +104,10 @@ STUDY_SWEEPS = {
         "values": (0.3, 0.4, 0.6, 0.8),
     },
 }
-# A filtered match counts as an inlier in the study if the homography
+# A filtered match counts as an inlier in the benchmark if the homography
 # maps its marker keypoint to within this many pixels of its frame
 # keypoint. One limit for every technique, so their counts compare.
-STUDY_MAX_ERROR = 3.0
+BENCHMARK_MAX_ERROR = 3.0
 
 # Pipeline settings
 MARKER_MAX_SIDE = 1000

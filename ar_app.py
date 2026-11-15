@@ -9,9 +9,9 @@ from estimators import HomographyNotFoundError
 from pipeline import (apply_detector, apply_estimator, apply_filter,
                       apply_matcher, apply_view, build_detector,
                       build_estimator, build_filter, build_matcher, build_view)
-from utils import (center_crop_to_size, count_best_matches, draw_text_rows,
-                   load_image, open_camera, save_numbered_image,
-                   shrink_to_max_side)
+from utils import (StageTimer, center_crop_to_size, count_best_matches,
+                   draw_text_rows, load_image, open_camera,
+                   save_numbered_image, shrink_to_max_side)
 from views import FrameResult
 
 VIEW_WINDOW_NAME = "Marker-based Augmented Reality"
@@ -137,43 +137,6 @@ class Stage:
         is empty if it has none.
         """
         return self.registry[self.technique_name].get("controls", {})
-
-
-class StageTimer:
-    """
-    Stopwatch of the pipeline: how long every stage of the last frame
-    took, and how long the whole frame took.
-    """
-
-    def __init__(self):
-        """
-        Create the timer, with no times yet.
-        """
-        self.stage_seconds = {}
-        self.frame_seconds = None
-        self.frame_start_time = None
-        self.stage_start_time = None
-
-    def start_frame(self):
-        """
-        Note that a new frame starts now. From the second frame on,
-        `frame_seconds` is the time since the previous frame started.
-        """
-        start_time = time.perf_counter()
-        if self.frame_start_time is not None:
-            self.frame_seconds = start_time - self.frame_start_time
-        self.frame_start_time = start_time
-        self.stage_start_time = start_time
-
-    def end_stage(self, stage_name):
-        """
-        Note that the stage `stage_name` ends now. Its entry in
-        `stage_seconds` is the time since the previous stage ended, or
-        since the frame started for the first stage.
-        """
-        end_time = time.perf_counter()
-        self.stage_seconds[stage_name] = end_time - self.stage_start_time
-        self.stage_start_time = end_time
 
 
 class MarkerArApp:
