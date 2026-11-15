@@ -21,6 +21,9 @@ FRAME_ALPHA = 0.2
 # Seconds a technique selector has to rest before the GUI switches to
 # the technique, so dragging past the others doesn't switch to each
 SELECTOR_DELAY = 0.5
+# Width in pixels of the panel under the sliders, which also sets the
+# width of the controls window
+PANEL_WIDTH = 420
 # Label of the slider that selects the technique of each stage
 SELECTOR_LABELS = {
     "detector": "Detector",
@@ -112,7 +115,7 @@ MATCHERS = {
     "BF": {
         "create": matchers.BruteForceMatcher,
         "settings": {"cross_check": False},
-        "filters": ("RATIO", "GLOBAL"),
+        "filters": ("LOCAL", "GLOBAL"),
     },
     "BF_CROSS": {
         "create": matchers.BruteForceMatcher,
@@ -129,7 +132,7 @@ MATCHERS = {
             "key_size": 12,
             "multi_probe_level": 1,
         },
-        "filters": ("RATIO", "GLOBAL"),
+        "filters": ("LOCAL", "GLOBAL"),
         "controls": {
             "checks": {
                 "label": "Checks",
@@ -142,11 +145,11 @@ MATCHERS = {
 }
 
 # Filters
-FILTER_NAME = "RATIO"
+FILTER_NAME = "LOCAL"
 
 FILTERS = {
-    "RATIO": {
-        "create": filters.RatioFilter,
+    "LOCAL": {
+        "create": filters.LocalRatioFilter,
         "settings": {"ratio": 0.7},
         "controls": {
             "ratio": {

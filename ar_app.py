@@ -16,14 +16,18 @@ from pipeline import (
 )
 from utils import (
     center_crop_to_size,
+    draw_text_rows,
     load_image,
     overlay_image,
     shrink_to_max_side,
     warp_image,
 )
 
-WINDOW_NAME = "Marker AR"
+WINDOW_NAME = "Marker-based Augmented Reality"
 CONTROLS_WINDOW_NAME = "Controls"
+
+QUIT_KEY = "q"
+RESET_KEY = "r"
 
 # Decimals kept in a setting value read from a trackbar, to drop the
 # rounding noise of position times step (70 * 0.01 is not exactly 0.7)
@@ -158,7 +162,13 @@ class MarkerArApp:
         """
         self.marker = marker
         self.substitute = substitute
+        self.reset()
 
+    def reset(self):
+        """
+        Go back to the techniques selected in config and the default
+        settings of every technique, and rebuild every stage.
+        """
         self.stages = {
             "detector": Stage("detector", config.DETECTOR_NAME, self.rebuild_detector),
             "matcher": Stage("matcher", config.MATCHER_NAME, self.rebuild_matcher),
@@ -261,8 +271,7 @@ class MarkerArApp:
         self.replace_invalid_filter()
         self.rebuild_from_first_changed_stage(changed_stage_names)
 
-        cv.destroyWindow(CONTROLS_WINDOW_NAME)
-        self.create_controls()
+        self.recreate_controls()
 
     def select_requested_names(self):
         """
@@ -333,6 +342,42 @@ class MarkerArApp:
                     self.change_setting,
                 )
 
+    def recreate_controls(self):
+        """
+        Close the controls window and open it again, so it has the
+        sliders of the techniques that are selected now, at their
+        current values.
+        """
+        cv.destroyWindow(CONTROLS_WINDOW_NAME)
+        self.create_controls()
+
+    def get_panel_rows(self):
+        """
+        Return what the controls panel shows, as a list of (heading,
+        text) pairs: for every stage its label with the selected
+        technique, then one row per control with its label and the
+        current value of its setting, and last the keys of the app.
+        """
+        rows = []
+        for stage in self.stages.values():
+            rows.append((stage.label, stage.name))
+            settings = stage.get_settings()
+            for setting_name, control in stage.get_controls().items():
+                value = settings[setting_name]
+                rows.append(("", f"{control['label']} {value:g}"))
+
+        rows.append(("Keys", f"{RESET_KEY} reset, {QUIT_KEY} quit"))
+        return rows
+
+    def show_panel(self):
+        """
+        Show the panel under the sliders of the controls window: the
+        selected techniques by name and the real values of their
+        settings, which the sliders can only show as whole numbers.
+        """
+        panel = draw_text_rows(self.get_panel_rows(), config.PANEL_WIDTH)
+        cv.imshow(CONTROLS_WINDOW_NAME, panel)
+
     def process_frame(self, frame):
         """
         Run the pipeline on `frame`. Returns the frame with the marker
@@ -365,6 +410,7 @@ def application():
     """
     Run the live app: find the marker in every camera frame and show the
     frame with the marker replaced by the substitute, until q is pressed.
+    Pressing r resets every technique and setting to its config default.
     Raises RuntimeError if the camera can't be opened.
     """
     capture = cv.VideoCapture(config.CAMERA_INDEX)
@@ -386,10 +432,15 @@ def application():
             break
 
         app.apply_requested_techniques()
+        app.show_panel()
         cv.imshow(WINDOW_NAME, app.process_frame(frame))
 
-        if cv.waitKey(5) == ord("q"):
+        key = cv.waitKey(5)
+        if key == ord(QUIT_KEY):
             break
+        if key == ord(RESET_KEY):
+            app.reset()
+            app.recreate_controls()
 
     capture.release()
     cv.destroyAllWindows()

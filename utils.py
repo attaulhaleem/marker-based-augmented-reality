@@ -174,6 +174,42 @@ def plot_outline(image, corners, title="", size=8):
     plot_image(draw_outline(image, corners), title, size)
 
 
+def draw_text_rows(
+    rows,
+    width,
+    row_height=30,
+    heading_width=130,
+    margin=14,
+    font_scale=0.6,
+    text_color=(235, 235, 235),
+    background_color=(40, 40, 40),
+):
+    """
+    Draw `rows`, a list of (heading, text) pairs, as a table on a new
+    image `width` pixels wide: one row per pair, `row_height` pixels
+    high, with the heading in a left column `heading_width` pixels wide
+    and the text right of it. `margin` is the space around the table,
+    and the colours are BGR. Returns the image.
+    """
+    height = 2 * margin + row_height * len(rows)
+    image = np.full((height, width, 3), background_color, np.uint8)
+
+    for row_index, (heading, text) in enumerate(rows):
+        baseline = margin + row_height * row_index + round(row_height * 0.7)
+        for column_text, left in ((heading, margin), (text, margin + heading_width)):
+            cv.putText(
+                image,
+                column_text,
+                (left, baseline),
+                cv.FONT_HERSHEY_SIMPLEX,
+                font_scale,
+                text_color,
+                1,
+                cv.LINE_AA,
+            )
+    return image
+
+
 def warp_image(image, homography, output_width, output_height):
     """
     Warp `image` with `homography` into an output of `output_width` x

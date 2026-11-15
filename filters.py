@@ -1,7 +1,8 @@
-class RatioFilter:
+class LocalRatioFilter:
     """
-    Ratio test: keeps the best match of a query descriptor only if it
-    is clearly closer than the second best.
+    Local ratio test: judges each match against its own second best
+    candidate. Keeps the best match of a query descriptor only if it is
+    clearly closer than the second best.
     """
 
     def __init__(self, ratio):
@@ -30,9 +31,9 @@ class RatioFilter:
 
 class GlobalThresholdFilter:
     """
-    Global threshold: keeps the best match of a query descriptor only
-    if its distance is a small fraction of the largest best-match
-    distance.
+    Global threshold: judges every match against one limit for the
+    whole set. Keeps the best match of a query descriptor only if its
+    distance is a small fraction of the largest best-match distance.
     """
 
     def __init__(self, fraction):

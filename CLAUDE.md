@@ -7,7 +7,7 @@ Files:
 - config.py: paths, settings and the technique registries (DETECTORS, MATCHERS, FILTERS, ESTIMATORS). The selected names (DETECTOR_NAME and so on) are the app's choice.
 - pipeline.py: the build_x factories and the pipeline stage functions.
 - estimators.py: the homography estimator class (HomographyEstimator) and HomographyNotFoundError. Imports nothing from the project, so config.py can import it without a cycle.
-- filters.py: the match filter classes (RatioFilter, GlobalThresholdFilter). Imports nothing from the project, so config.py can import it without a cycle.
+- filters.py: the match filter classes (LocalRatioFilter, GlobalThresholdFilter). Imports nothing from the project, so config.py can import it without a cycle.
 - matchers.py: the matcher classes (BruteForceMatcher, FlannMatcher). Imports nothing from the project, so config.py can import it without a cycle.
 - utils.py: general helpers (plotting, image, geometry).
 - VAR-BSC-Final-Project-2026.pdf: the assignment. Check it for requirements.
