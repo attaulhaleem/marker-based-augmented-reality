@@ -1,5 +1,6 @@
 import cv2 as cv
 import matplotlib.pyplot as plt
+import numpy as np
 
 
 def load_image(image_path):
@@ -66,6 +67,43 @@ def plot_matches(
         flags=cv.DRAW_MATCHES_FLAGS_NOT_DRAW_SINGLE_POINTS,
     )
     plot_image(image_with_matches, title, size)
+
+
+def project_corners(homography, image):
+    """
+    Map the four corners of `image` with `homography`. Returns their
+    (x, y) positions as a float array of shape (4, 1, 2), in the order
+    top-left, top-right, bottom-right, bottom-left.
+    """
+    image_height, image_width = image.shape[:2]
+    right = image_width - 1
+    bottom = image_height - 1
+
+    corners = np.float32([[0, 0], [right, 0], [right, bottom], [0, bottom]])
+    corners = corners.reshape(4, 1, 2)
+
+    return cv.perspectiveTransform(corners, homography)
+
+
+def draw_outline(image, corners, color=(0, 255, 0), thickness=3):
+    """
+    Draw the closed outline that joins `corners` (an array of (x, y)
+    positions, in order) on a copy of `image`, in the BGR `color` and
+    with lines `thickness` pixels wide. Returns the copy.
+    """
+    image_with_outline = image.copy()
+    # cv.polylines takes a list of shapes with whole pixel positions
+    outline = np.int32(np.round(corners))
+    cv.polylines(image_with_outline, [outline], True, color, thickness)
+    return image_with_outline
+
+
+def plot_outline(image, corners, title="", size=8):
+    """
+    Show `image` with the closed outline that joins `corners` (an array
+    of (x, y) positions, in order) drawn on it.
+    """
+    plot_image(draw_outline(image, corners), title, size)
 
 
 def shrink_to_max_side(image, max_side):

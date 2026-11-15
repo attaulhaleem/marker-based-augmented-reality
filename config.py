@@ -1,5 +1,6 @@
 import cv2 as cv
 
+import estimators
 import filters
 import matchers
 
@@ -69,6 +70,16 @@ FILTERS = {
     "GLOBAL": {
         "create": filters.GlobalThresholdFilter,
         "settings": {"fraction": 0.3},
+    },
+}
+
+# Estimators
+ESTIMATOR_NAME = "RANSAC"
+
+ESTIMATORS = {
+    "RANSAC": {
+        "create": estimators.HomographyEstimator,
+        "settings": {"method": cv.RANSAC, "reprojection_threshold": 3.0},
     },
 }
 
