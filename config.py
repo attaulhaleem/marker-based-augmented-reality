@@ -159,6 +159,8 @@ SELECTOR_KEYS = {
 # be combined with:
 # - DETECTORS "norm": the distance that compares its descriptors.
 # - MATCHERS "filters": the filters that can use its matches.
+# Every VIEWS entry also has a "description": what the view shows,
+# written above it in the video window.
 # An entry can also have "controls": the settings the GUI shows a
 # slider for, each with its "label", "minimum", "maximum" and "step".
 # The selected techniques and the controls are checked at the bottom
@@ -359,6 +361,7 @@ VIEW_NAME = "AUGMENTED"
 VIEWS = {
     "AUGMENTED": {
         "create": views.AugmentedView,
+        "description": "Frame With the Marker Replaced by the Substitute",
         "settings": {"frame_alpha": FRAME_ALPHA},
         "controls": {
             "frame_alpha": {
@@ -369,9 +372,14 @@ VIEWS = {
             },
         },
     },
-    "KEYPOINTS": {"create": views.KeypointsView, "settings": {}},
+    "KEYPOINTS": {
+        "create": views.KeypointsView,
+        "description": "Keypoints of the Frame, With Their Size and Orientation",
+        "settings": {},
+    },
     "UNFILTERED": {
         "create": views.UnfilteredMatchesView,
+        "description": "Best Matches Before Filtering (Marker Left, Frame Right)",
         "settings": {"shown_match_count": 100},
         "controls": {
             "shown_match_count": {
@@ -382,8 +390,16 @@ VIEWS = {
             },
         },
     },
-    "FILTERED": {"create": views.FilteredMatchesView, "settings": {}},
-    "INLIERS": {"create": views.InlierMatchesView, "settings": {}},
+    "FILTERED": {
+        "create": views.FilteredMatchesView,
+        "description": "Matches Kept by the Filter (Marker Left, Frame Right)",
+        "settings": {},
+    },
+    "INLIERS": {
+        "create": views.InlierMatchesView,
+        "description": "Matches That Agree With the Homography (Marker Left, Frame Right)",
+        "settings": {},
+    },
 }
 
 # The registry of each pipeline stage, in pipeline order

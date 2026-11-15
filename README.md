@@ -34,7 +34,7 @@ Hold up the marker object in front of the webcam to see the augmentation.
 
 ## Controls
 
-The app opens two windows: the video, and a Controls window with sliders for selecting techniques and tuning settings.
+The app opens two windows: the video, with the name of the current view at the top and the counts and times at the bottom, and a Controls window with sliders for selecting techniques and tuning settings.
 
 | Key | Action |
 | --- | --- |

@@ -33,7 +33,7 @@ Design rules to keep:
 
 GUI (ar_app.py, OpenCV HighGUI on macOS):
 
-- Two windows. The video window shows the selected view above a status strip (marker found or not, keypoint and match counts, time per stage and FPS, the keys). The Controls window has the trackbars above a panel that shows the selected techniques by name, the real values of their settings and the keys.
+- Two windows. The video window shows the selected view between a title strip (the view name and its "description" from config.VIEWS) and a status strip (marker found or not, keypoint and match counts, time per stage and FPS, the keys). The Controls window has the trackbars above a panel that shows the selected techniques by name, the real values of their settings and the keys.
 - The app has five stages: detector, matcher, filter, estimator and view. Each is a Stage in MarkerArApp.stages, built from config.REGISTRIES, config.SELECTOR_LABELS and config.SELECTOR_KEYS. Adding a stage is one line there plus its registry, label and key in config.
 - Each stage has a selector trackbar for its technique and one trackbar per entry of the selected technique's "controls" in its registry: {setting_name: {"label", "minimum", "maximum", "step"}}. A setting without a control has no slider. Adding a slider is one "controls" entry, no app code.
 - Keys: d, m, f, e and v select the next detector, matcher, filter, estimator and view; s saves the camera frame (nothing drawn on it) as the next unused frame_NN.png in config.FRAMES_FOLDER, or the folder given with --frames; r resets every technique and setting to the config defaults; q quits.

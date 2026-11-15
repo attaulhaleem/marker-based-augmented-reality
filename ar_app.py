@@ -499,6 +499,17 @@ class MarkerArApp:
 
         return view_image
 
+    def get_title_rows(self):
+        """
+        Return what the title strip above the view shows, as a list of
+        (heading, text) pairs: the name of the selected view and what it
+        shows (its "description" in config.VIEWS).
+        """
+        view_stage = self.stages["view"]
+        view_name = view_stage.technique_name
+        description = view_stage.registry[view_name]["description"]
+        return [(view_stage.label, f"{view_name}: {description}")]
+
     def get_status_rows(self):
         """
         Return what the status strip shows about the last processed
@@ -582,8 +593,8 @@ def run_app(
     """
     Run the live app: find the marker (the image at `marker_path`) in
     every camera frame and show the frame with the marker replaced by
-    the substitute (the image at `substitute_path`), above a status
-    strip, until q is pressed.
+    the substitute (the image at `substitute_path`), between a title
+    strip that names the view and a status strip, until q is pressed.
     Pressing r resets every technique and setting to its config default,
     s saves the camera frame in `frames_folder`, and d, m, f, e or v
     selects the next detector, matcher, filter, estimator or view.
@@ -610,10 +621,14 @@ def run_app(
         app.show_panel()
         shown_view = app.process_frame(frame)
         shown_view = shrink_to_max_side(shown_view, config.DISPLAY_MAX_SIDE)
-        status_strip = draw_text_rows(
-            app.get_status_rows(), shown_view.shape[1], config.STATUS_TEXT_SCALE
+        view_width = shown_view.shape[1]
+        title_strip = draw_text_rows(
+            app.get_title_rows(), view_width, config.STATUS_TEXT_SCALE
         )
-        cv.imshow(VIEW_WINDOW_NAME, np.vstack([shown_view, status_strip]))
+        status_strip = draw_text_rows(
+            app.get_status_rows(), view_width, config.STATUS_TEXT_SCALE
+        )
+        cv.imshow(VIEW_WINDOW_NAME, np.vstack([title_strip, shown_view, status_strip]))
 
         key = cv.waitKey(5)
         if key == ord(QUIT_KEY):
