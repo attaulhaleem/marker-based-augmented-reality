@@ -32,6 +32,14 @@ SELECTOR_LABELS = {
     "estimator": "Estimator",
 }
 
+# Key that selects the next technique of each stage
+SELECTOR_KEYS = {
+    "detector": "d",
+    "matcher": "m",
+    "filter": "f",
+    "estimator": "e",
+}
+
 # Technique registries. Every entry has "create" (called with the
 # settings to build the technique) and "settings" (its defaults, which
 # the GUI can override). Some entries also say what the technique can

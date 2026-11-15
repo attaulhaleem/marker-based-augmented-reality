@@ -123,6 +123,7 @@ class Stage:
         selected technique again after a change.
         """
         self.label = config.SELECTOR_LABELS[stage_name]
+        self.key = config.SELECTOR_KEYS[stage_name]
         self.registry = config.REGISTRIES[stage_name]
         self.name = technique_name
         self.rebuild = rebuild
@@ -255,15 +256,20 @@ class MarkerArApp:
     def apply_requested_techniques(self):
         """
         Switch to the techniques requested with the selectors, once
-        they have rested for config.SELECTOR_DELAY seconds. Then
-        rebuild the changed stages and the controls window, so it shows
-        the sliders of the selected techniques only.
+        they have rested for config.SELECTOR_DELAY seconds.
         """
         if not self.requested_names:
             return
         if time.perf_counter() - self.request_time < config.SELECTOR_DELAY:
             return
+        self.switch_to_requested_techniques()
 
+    def switch_to_requested_techniques(self):
+        """
+        Switch to the requested techniques now. Then rebuild the changed
+        stages and the controls window, so it shows the sliders of the
+        selected techniques only.
+        """
         changed_stage_names = self.select_requested_names()
         if not changed_stage_names:
             return
@@ -272,6 +278,33 @@ class MarkerArApp:
         self.rebuild_from_first_changed_stage(changed_stage_names)
 
         self.recreate_controls()
+
+    def select_next_technique(self, stage_name):
+        """
+        Switch the stage `stage_name` to the technique after the
+        selected one, in the order of its selector, and from the last
+        back to the first.
+        """
+        option_names = self.get_option_names(stage_name)
+        selected_index = option_names.index(self.stages[stage_name].name)
+        next_index = (selected_index + 1) % len(option_names)
+
+        self.requested_names[stage_name] = option_names[next_index]
+        self.switch_to_requested_techniques()
+
+    def handle_key(self, key):
+        """
+        React to the pressed `key` (as returned by cv.waitKey): the
+        reset key resets the app, and the key of a stage selects its
+        next technique. Other keys do nothing.
+        """
+        if key == ord(RESET_KEY):
+            self.reset()
+            self.recreate_controls()
+
+        for stage_name, stage in self.stages.items():
+            if key == ord(stage.key):
+                self.select_next_technique(stage_name)
 
     def select_requested_names(self):
         """
@@ -356,7 +389,8 @@ class MarkerArApp:
         Return what the controls panel shows, as a list of (heading,
         text) pairs: for every stage its label with the selected
         technique, then one row per control with its label and the
-        current value of its setting, and last the keys of the app.
+        current value of its setting, and last one row per key of the
+        app.
         """
         rows = []
         for stage in self.stages.values():
@@ -364,9 +398,18 @@ class MarkerArApp:
             settings = stage.get_settings()
             for setting_name, control in stage.get_controls().items():
                 value = settings[setting_name]
-                rows.append(("", f"{control['label']} {value:g}"))
+                rows.append(("", f"{control['label']}: {value:g}"))
 
-        rows.append(("Keys", f"{RESET_KEY} reset, {QUIT_KEY} quit"))
+        key_texts = []
+        for stage in self.stages.values():
+            key_texts.append(f"{stage.key}: Next {stage.label}")
+        key_texts.append(f"{RESET_KEY}: Reset")
+        key_texts.append(f"{QUIT_KEY}: Quit")
+
+        heading = "Keys"
+        for key_text in key_texts:
+            rows.append((heading, key_text))
+            heading = ""
         return rows
 
     def show_panel(self):
@@ -410,7 +453,9 @@ def application():
     """
     Run the live app: find the marker in every camera frame and show the
     frame with the marker replaced by the substitute, until q is pressed.
-    Pressing r resets every technique and setting to its config default.
+    Pressing r resets every technique and setting to its config default,
+    and d, m, f or e selects the next detector, matcher, filter or
+    estimator.
     Raises RuntimeError if the camera can't be opened.
     """
     capture = cv.VideoCapture(config.CAMERA_INDEX)
@@ -438,9 +483,7 @@ def application():
         key = cv.waitKey(5)
         if key == ord(QUIT_KEY):
             break
-        if key == ord(RESET_KEY):
-            app.reset()
-            app.recreate_controls()
+        app.handle_key(key)
 
     capture.release()
     cv.destroyAllWindows()
